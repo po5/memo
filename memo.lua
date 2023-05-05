@@ -42,6 +42,7 @@ local history = io.open(history_path, "a+")
 local last_state = nil
 
 local uosc_available = false
+local menu_shown = false
 
 local function write_history()
     local path = mp.get_property("path")
@@ -70,6 +71,10 @@ local function show_history(entries, resume)
         existing_files = {},
         cursor = history:seek("end")
     }
+
+    if resume and last_state and state.cursor == 0 then
+        return
+    end
 
     -- all of these error cases can only happen if the user messes with the history file externally
     local function read_line()
@@ -175,13 +180,16 @@ local function show_history(entries, resume)
             title = "History (memo)",
             items = menu_items,
             selected_index = 1,
-            keep_open = true
+            keep_open = #menu_items > 0,
+            on_close = {"script-message-to", script_name, "memo-clear"}
         }
         local json = mp.utils.format_json(menu)
-        mp.commandv("script-message-to", "uosc", resume and "update-menu" or "open-menu", json)
+        mp.commandv("script-message-to", "uosc", menu_shown and resume and "update-menu" or "open-menu", json)
     else
         mp.osd_message("[memo] uosc is required!", 5)
     end
+
+    menu_shown = true
 end
 
 local function file_load()
@@ -196,6 +204,11 @@ mp.register_script_message("uosc-version", function(version)
     uosc_available = true
 end)
 
+mp.register_script_message("memo-clear", function()
+    last_state = nil
+    menu_shown = false
+end)
+
 mp.register_script_message("memo-more", function()
     show_history(options.entries, true)
 end)
@@ -203,6 +216,7 @@ end)
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
 mp.add_key_binding(nil, "memo-history", function()
+    last_state = nil
     show_history(options.entries)
 end)
 
