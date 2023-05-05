@@ -76,11 +76,11 @@ local function write_history()
     history:flush()
 end
 
-local function show_history(entries, resume)
+local function show_history(entries, resume, update)
     if event_loop_exhausted then return end
     event_loop_exhausted = true
 
-    local should_close = menu_shown and not resume
+    local should_close = menu_shown and not resume and not update
     if should_close then
         menu_shown = false
         mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
@@ -94,11 +94,16 @@ local function show_history(entries, resume)
         known_files = {},
         existing_files = {},
         cursor = history:seek("end"),
-        retry = 0
+        retry = 0,
+        first_page = true
     }
 
-    if resume and last_state and state.cursor == 0 then
-        return
+    if resume and last_state then
+        if state.cursor == 0 then
+            return
+        end
+
+        state.first_page = false
     end
 
     -- all of these error cases can only happen if the user messes with the history file externally
@@ -236,6 +241,10 @@ local function file_load()
     if options.enabled then
         write_history()
     end
+
+    if menu_shown and last_state and last_state.first_page then
+        show_history(options.entries, false, true)
+    end
 end
 
 local function idle()
@@ -259,7 +268,7 @@ mp.command_native_async({"script-message-to", "uosc", "get-version", script_name
 
 mp.add_key_binding(nil, "memo-history", function()
     last_state = nil
-    show_history(options.entries)
+    show_history(options.entries, false)
 end)
 
 mp.register_event("file-loaded", file_load)
