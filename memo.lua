@@ -41,6 +41,7 @@ local history_path = mp.command_native({"expand-path", options.history_path})
 local history = io.open(history_path, "a+")
 local last_state = nil
 
+local event_loop_exhausted = false
 local uosc_available = false
 local menu_shown = false
 
@@ -76,8 +77,12 @@ local function write_history()
 end
 
 local function show_history(entries, resume)
+    if event_loop_exhausted then return end
+    event_loop_exhausted = true
+
     local should_close = menu_shown and not resume
     if should_close then
+        menu_shown = false
         mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
         return
     end
@@ -188,6 +193,7 @@ local function show_history(entries, resume)
     end
 
     local item_count = -1
+    local attempts = 0
 
     while #menu_items < entries do
         if state.cursor - max_digits_length <= 0 then
@@ -196,7 +202,9 @@ local function show_history(entries, resume)
 
         read_line()
 
-        if uosc_available and #menu_items ~= item_count then
+        attempts = attempts + 1
+
+        if uosc_available and attempts % options.entries == 0 and #menu_items ~= item_count then
             item_count = #menu_items
             local temp_items = {table.unpack(menu_items)}
             for i=1, options.entries - item_count do
@@ -214,7 +222,7 @@ local function show_history(entries, resume)
         if options.pagination and #menu_items > 0 and state.cursor - max_digits_length > 0 then
             table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
         end
-        mp.commandv("script-message-to", "uosc", "update-menu", menu_json(menu_items))
+        mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(menu_items))
     else
         mp.osd_message("[memo] uosc is required!", 5)
     end
@@ -228,6 +236,10 @@ local function file_load()
     if options.enabled then
         write_history()
     end
+end
+
+local function idle()
+    event_loop_exhausted = false
 end
 
 mp.register_script_message("uosc-version", function(version)
@@ -251,3 +263,4 @@ mp.add_key_binding(nil, "memo-history", function()
 end)
 
 mp.register_event("file-loaded", file_load)
+mp.register_idle(idle)
