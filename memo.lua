@@ -64,12 +64,13 @@ end
 
 local function show_history(entries, resume)
     local max_digits_length = 4 + 1
-    local retry_offset = 1024
+    local retry_offset = 512
     local menu_items = {}
     local state = resume and last_state or {
         known_files = {},
         existing_files = {},
-        cursor = history:seek("end")
+        cursor = history:seek("end"),
+        retry = 0
     }
 
     if resume and last_state and state.cursor == 0 then
@@ -94,6 +95,12 @@ local function show_history(entries, resume)
             local last_valid = string.match(retry, ".*(%d+\n.*)")
             local offset = last_valid and #last_valid or retry_offset
             state.cursor = state.cursor + retry_offset - offset + 1
+            if state.cursor == state.retry then
+                mp.msg.debug("bailing")
+                state.cursor = 0
+                return
+            end
+            state.retry = state.cursor
             mp.msg.debug("retrying @ " .. state.cursor)
             return
         end
