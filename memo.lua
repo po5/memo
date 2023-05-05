@@ -39,6 +39,7 @@ mp.options.read_options(options, "memo")
 
 local history_path = mp.command_native({"expand-path", options.history_path})
 local history = io.open(history_path, "a+")
+local last_state = nil
 
 local uosc_available = false
 
@@ -62,42 +63,44 @@ end
 
 local function show_history(entries, resume)
     local max_digits_length = 4 + 1
-    local known_files = {}
-    local existing_files = {}
-    local menu_items = {}
-    local cursor = resume or history:seek("end")
     local retry_offset = 1024
+    local menu_items = {}
+    local state = resume and last_state or {
+        known_files = {},
+        existing_files = {},
+        cursor = history:seek("end")
+    }
 
     -- all of these error cases can only happen if the user messes with the history file externally
     local function read_line()
-        history:seek("set", cursor - max_digits_length)
+        history:seek("set", state.cursor - max_digits_length)
         local tail = history:read(max_digits_length)
         if not tail then
-            mp.msg.debug("error could not read entry length @ " .. cursor - max_digits_length)
+            mp.msg.debug("error could not read entry length @ " .. state.cursor - max_digits_length)
             return
         end
 
         local entry_length_str, whitespace = tail:match("(%d+)(%s*)$")
         if not entry_length_str then
-            mp.msg.debug("invalid entry length @ " .. cursor)
-            cursor = math.max(cursor - retry_offset, 0)
-            history:seek("set", cursor)
+            mp.msg.debug("invalid entry length @ " .. state.cursor)
+            state.cursor = math.max(state.cursor - retry_offset, 0)
+            history:seek("set", state.cursor)
             local retry = history:read(retry_offset)
             local last_valid = string.match(retry, ".*(%d+\n.*)")
             local offset = last_valid and #last_valid or retry_offset
-            cursor = cursor + retry_offset - offset + 1
-            mp.msg.debug("retrying @ " .. cursor)
+            state.cursor = state.cursor + retry_offset - offset + 1
+            mp.msg.debug("retrying @ " .. state.cursor)
             return
         end
 
         local entry_length = tonumber(entry_length_str)
-        cursor = cursor - entry_length - #entry_length_str - #whitespace - 1
-        history:seek("set", cursor)
+        state.cursor = state.cursor - entry_length - #entry_length_str - #whitespace - 1
+        history:seek("set", state.cursor)
 
         local entry = history:read(entry_length)
         local timestamp_str, title_length_str, file_info = entry:match("([^,]*),(%d*),(.*)")
         if not timestamp_str then
-            mp.msg.debug("invalid entry data @ " .. cursor)
+            mp.msg.debug("invalid entry data @ " .. state.cursor)
             return
         end
 
@@ -107,23 +110,23 @@ local function show_history(entries, resume)
         local title_length = title_length_str ~= "" and tonumber(title_length_str) or 0
         local full_path = file_info:sub(title_length + 2)
 
-        if options.hide_duplicates and known_files[full_path] then
+        if options.hide_duplicates and state.known_files[full_path] then
             return
         end
 
         if full_path:find("^%a[%a%d-_]+:") ~= nil then
-            existing_files[full_path] = true
-            known_files[full_path] = true
+            state.existing_files[full_path] = true
+            state.known_files[full_path] = true
         end
 
         if options.hide_deleted then
-            if known_files[full_path] and not existing_files[full_path] then
+            if state.known_files[full_path] and not state.existing_files[full_path] then
                 return
             end
-            if not known_files[full_path] then
+            if not state.known_files[full_path] then
                 local stat = mp.utils.file_info(full_path)
                 if stat then
-                    existing_files[full_path] = true
+                    state.existing_files[full_path] = true
                 else
                     return
                 end
@@ -149,21 +152,23 @@ local function show_history(entries, resume)
             title = title:sub(1, options.truncate_titles - 3) .. "..."
         end
 
-        known_files[full_path] = true
+        state.known_files[full_path] = true
         table.insert(menu_items, {title = title, hint = timestamp, value = {"loadfile", full_path}, keep_open = false})
     end
 
     while #menu_items < entries do
-        if cursor - max_digits_length <= 0 then
+        if state.cursor - max_digits_length <= 0 then
             break
         end
 
         read_line()
     end
 
+    last_state = state
+
     if uosc_available then
-        if options.pagination and #menu_items > 0 and cursor - max_digits_length > 0 then
-            table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more", cursor}, italic = "true", muted = "true", icon = "navigate_next"})
+        if options.pagination and #menu_items > 0 and state.cursor - max_digits_length > 0 then
+            table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more"}, italic = "true", muted = "true", icon = "navigate_next"})
         end
         local menu = {
             type = "memo-history",
@@ -191,8 +196,8 @@ mp.register_script_message("uosc-version", function(version)
     uosc_available = true
 end)
 
-mp.register_script_message("memo-more", function(cursor)
-    show_history(options.entries, tonumber(cursor))
+mp.register_script_message("memo-more", function()
+    show_history(options.entries, true)
 end)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
