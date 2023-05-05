@@ -44,6 +44,19 @@ local last_state = nil
 local uosc_available = false
 local menu_shown = false
 
+local function menu_json(menu_items)
+    local menu = {
+        type = "memo-history",
+        title = "History (memo)",
+        items = menu_items,
+        selected_index = 1,
+        on_close = {"script-message-to", script_name, "memo-clear"}
+    }
+
+    local json = mp.utils.format_json(menu)
+    return json or "{}"
+end
+
 local function write_history()
     local path = mp.get_property("path")
     if path == nil then return end
@@ -63,6 +76,12 @@ local function write_history()
 end
 
 local function show_history(entries, resume)
+    local should_close = menu_shown and not resume
+    if should_close then
+        mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
+        return
+    end
+
     local max_digits_length = 4 + 1
     local retry_offset = 512
     local menu_items = {}
@@ -165,8 +184,10 @@ local function show_history(entries, resume)
         end
 
         state.known_files[full_path] = true
-        table.insert(menu_items, {title = title, hint = timestamp, value = {"loadfile", full_path}, keep_open = false})
+        table.insert(menu_items, {title = title, hint = timestamp, value = {"loadfile", full_path}})
     end
+
+    local item_count = -1
 
     while #menu_items < entries do
         if state.cursor - max_digits_length <= 0 then
@@ -174,24 +195,26 @@ local function show_history(entries, resume)
         end
 
         read_line()
+
+        if uosc_available and #menu_items ~= item_count then
+            item_count = #menu_items
+            local temp_items = {table.unpack(menu_items)}
+            for i=1, options.entries - item_count do
+                table.insert(temp_items, {value = "ignore", keep_open = true})
+            end
+            table.insert(temp_items, {title = "Loading...", value = "ignore", italic = "true", muted = "true", icon = "spinner", keep_open = true})
+            mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(temp_items))
+            menu_shown = true
+        end
     end
 
     last_state = state
 
     if uosc_available then
         if options.pagination and #menu_items > 0 and state.cursor - max_digits_length > 0 then
-            table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more"}, italic = "true", muted = "true", icon = "navigate_next"})
+            table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
         end
-        local menu = {
-            type = "memo-history",
-            title = "History (memo)",
-            items = menu_items,
-            selected_index = 1,
-            keep_open = #menu_items > 0,
-            on_close = {"script-message-to", script_name, "memo-clear"}
-        }
-        local json = mp.utils.format_json(menu)
-        mp.commandv("script-message-to", "uosc", menu_shown and resume and "update-menu" or "open-menu", json)
+        mp.commandv("script-message-to", "uosc", "update-menu", menu_json(menu_items))
     else
         mp.osd_message("[memo] uosc is required!", 5)
     end
