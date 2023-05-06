@@ -45,6 +45,45 @@ local event_loop_exhausted = false
 local uosc_available = false
 local menu_shown = false
 
+local function utf8_char_bytes(str, i)
+    local char_byte = str:byte(i)
+    if char_byte < 0xC0 then
+        return 1
+    elseif char_byte < 0xE0 then
+        return 2
+    elseif char_byte < 0xF0 then
+        return 3
+    elseif char_byte < 0xF8 then
+        return 4
+    else
+        return 1
+    end
+end
+
+local function utf8_iter(str)
+    local byte_start = 1
+    return function()
+        local start = byte_start
+        if #str < start then return nil end
+        local byte_count = utf8_char_bytes(str, start)
+        byte_start = start + byte_count
+        return start, str:sub(start, start + byte_count - 1)
+    end
+end
+
+local function utf8_subwidth(str, start_index, end_index)
+    local index = 1
+    local substr = ""
+    for _, char in utf8_iter(str) do
+        if start_index <= index and index <= end_index then
+            local width = #char > 2 and 2 or 1
+            index = index + width
+            substr = substr .. char
+        end
+    end
+    return substr, index
+end
+
 local function menu_json(menu_items)
     local menu = {
         type = "memo-history",
@@ -190,7 +229,7 @@ local function show_history(entries, resume, update)
         end
 
         if options.truncate_titles > 0 and #title > options.truncate_titles then
-            title = title:sub(1, options.truncate_titles - 3) .. "..."
+            title = utf8_subwidth(title, 1, options.truncate_titles - 3) .. "..."
         end
 
         state.known_files[full_path] = true
