@@ -209,10 +209,10 @@ function open_menu()
     bind_keys(options.close_binding, "close", close_menu)
     bind_keys(options.select_binding, "select", function()
         local item = menu_data.items[menu_data.selected_index]
-        mp.commandv(table.unpack(item.value))
         if not item.keep_open then
             close_menu()
         end
+        mp.commandv(table.unpack(item.value))
     end)
     osd.hidden = false
     draw_menu()
