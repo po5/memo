@@ -9,7 +9,7 @@ local options = {
     -- How many entries to display in menu
     entries = 10,
 
-    -- Display navigation to older entries
+    -- Display navigation to older/newer entries
     pagination = true,
 
     -- Display files only once
@@ -203,7 +203,7 @@ function open_menu()
     mp.observe_property("shared-script-properties", "native", update_margins)
 
     bind_keys(options.up_binding, "move_up", function()
-        menu_data.selected_index = math.max(math.min(menu_data.selected_index, #menu_data.items) - 1, 1)
+        menu_data.selected_index = math.max(menu_data.selected_index - 1, 1)
         draw_menu()
     end, { repeatable = true })
     bind_keys(options.down_binding, "move_down", function()
@@ -229,13 +229,13 @@ function draw_menu(delay)
     end
 
     local num_options = #menu_data.items > 0 and #menu_data.items + 1 or 1
-    local selected_index = math.min(menu_data.selected_index, #menu_data.items)
+    menu_data.selected_index = math.min(menu_data.selected_index, #menu_data.items)
 
     local function get_scrolled_lines()
         local output_height = height - margin_top * height - margin_bottom * height
         local screen_lines = math.max(math.floor(output_height / font_size), 1)
         local max_scroll = math.max(num_options - screen_lines, 0)
-        return math.min(math.max(selected_index - math.ceil(screen_lines / 2), 0), max_scroll) - 1
+        return math.min(math.max(menu_data.selected_index - math.ceil(screen_lines / 2), 0), max_scroll) - 1
     end
 
     local ass = assdraw.ass_new()
@@ -266,9 +266,11 @@ function draw_menu(delay)
                 if item.icon == "spinner" then
                     icon = "⟳ "
                 elseif item.icon == "navigate_next" then
-                    icon = selected_index == i and "▶ - " or "▷- "
+                    icon = menu_data.selected_index == i and "▶ - " or "▷- "
+                elseif item.icon == "navigate_before" then
+                    icon = menu_data.selected_index == i and "◀ - " or "◁- "
                 else
-                    icon = selected_index == i and "●  - " or "○ - "
+                    icon = menu_data.selected_index == i and "●  - " or "○ - "
                 end
                 ass:new_event()
                 ass:pos(10, pos_y + menu_index * font_size)
@@ -305,11 +307,11 @@ function write_history()
     history:flush()
 end
 
-function show_history(entries, resume, update)
+function show_history(entries, next_page, prev_page, update)
     if event_loop_exhausted then return end
     event_loop_exhausted = true
 
-    local should_close = menu_shown and not resume and not update
+    local should_close = menu_shown and not prev_page and not next_page and not update
     if should_close then
         menu_shown = false
         if uosc_available then
@@ -323,21 +325,46 @@ function show_history(entries, resume, update)
     local max_digits_length = 4 + 1
     local retry_offset = 512
     local menu_items = {}
-    local state = resume and last_state or {
+    local state = (prev_page or next_page) and last_state or {
         known_dirs = {},
         known_files = {},
         existing_files = {},
         cursor = history:seek("end"),
         retry = 0,
-        first_page = true
+        pages = {},
+        current_page = 1
     }
 
-    if resume and last_state then
-        if state.cursor == 0 then
-            return
-        end
+    if update then
+        state.pages = {}
+    end
 
-        state.first_page = false
+    if last_state then
+        if prev_page then
+            if state.current_page == 1 then
+                return
+            end
+            state.current_page = state.current_page - 1
+        elseif next_page then
+            if state.cursor == 0 and not state.pages[state.current_page + 1] then
+                return
+            end
+
+            state.current_page = state.current_page + 1
+        end
+    end
+
+    if state.pages[state.current_page] then
+        if uosc_available then
+            mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(state.pages[state.current_page]))
+        elseif menu_data then
+            menu_data.items = state.pages[state.current_page]
+            draw_menu()
+        else
+            menu_data = menu_json(state.pages[state.current_page], true)
+            draw_menu()
+        end
+        return
     end
 
     -- all of these error cases can only happen if the user messes with the history file externally
@@ -467,12 +494,18 @@ function show_history(entries, resume, update)
             for i=1, options.entries - item_count do
                 table.insert(temp_items, {value = "ignore", keep_open = true})
             end
+
             table.insert(temp_items, {title = "Loading...", value = "ignore", italic = "true", muted = "true", icon = "spinner", keep_open = true})
+
+            if next_page and last_state then
+                table.insert(temp_items, {value = "ignore", keep_open = true})
+            end
+
             if uosc_available then
                 mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(temp_items))
                 menu_shown = true
             elseif menu_data then
-                menu_data.items = menu_json(temp_items, true).items
+                menu_data.items = temp_items
                 osd_update = mp.get_time() + 0.1
             else
                 menu_data = menu_json(temp_items, true)
@@ -485,15 +518,22 @@ function show_history(entries, resume, update)
         attempts = attempts + 1
     end
 
+    if options.pagination and #menu_items > 0 then
+        if state.cursor - max_digits_length > 0 then
+            table.insert(menu_items, {title = "Older entries", value = {"script-binding", "memo-next"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
+        end
+        if state.current_page ~= 1 then
+            table.insert(menu_items, {title = "Newer entries", value = {"script-binding", "memo-prev"}, italic = "true", muted = "true", icon = "navigate_before", keep_open = true})
+        end
+    end
+
+    state.pages[state.current_page] = menu_items
     last_state = state
 
-    if options.pagination and #menu_items > 0 and state.cursor - max_digits_length > 0 then
-        table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-next"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
-    end
     if uosc_available then
         mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(menu_items))
     elseif menu_data then
-        menu_data.items = menu_json(menu_items, true).items
+        menu_data.items = menu_items
         draw_menu()
     else
         menu_data = menu_json(menu_items, true)
@@ -510,8 +550,8 @@ function file_load()
         write_history()
     end
 
-    if menu_shown and last_state and last_state.first_page then
-        show_history(options.entries, false, true)
+    if menu_shown and last_state and last_state.current_page == 1 then
+        show_history(options.entries, false, false, true)
     end
 end
 
@@ -548,12 +588,15 @@ function memo_clear()
     menu_shown = false
 end
 
+function memo_prev()
+    show_history(options.entries, false, true)
+end
+
 function memo_next()
     show_history(options.entries, true)
 end
 
 mp.register_script_message("memo-clear", memo_clear)
-mp.register_script_message("memo-next", memo_next)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
@@ -563,9 +606,8 @@ mp.add_key_binding("h", "memo-history", function()
     show_history(options.entries, false)
 end)
 
-mp.add_key_binding(nil, "memo-next", function()
-    memo_next()
-end)
+mp.add_key_binding(nil, "memo-next", memo_next)
+mp.add_key_binding(nil, "memo-prev", memo_prev)
 
 mp.register_event("file-loaded", file_load)
 mp.register_idle(idle)
