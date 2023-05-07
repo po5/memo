@@ -9,7 +9,7 @@ local options = {
     -- How many entries to display in menu
     entries = 10,
 
-    -- Allow navigating to older entries
+    -- Display navigation to older entries
     pagination = true,
 
     -- Display files only once
@@ -17,6 +17,9 @@ local options = {
 
     -- Check if files still exist
     hide_deleted = true,
+
+    -- Display only the latest file from each directory
+    hide_same_dir = false,
 
     -- Date format https://www.lua.org/pil/22.1.html
     timestamp_format = "%Y-%m-%d %H:%M:%S",
@@ -321,6 +324,7 @@ function show_history(entries, resume, update)
     local retry_offset = 512
     local menu_items = {}
     local state = resume and last_state or {
+        known_dirs = {},
         known_files = {},
         existing_files = {},
         cursor = history:seek("end"),
@@ -385,9 +389,19 @@ function show_history(entries, resume, update)
             return
         end
 
+        local dirname, basename
+
         if full_path:find("^%a[%a%d-_]+:") ~= nil then
             state.existing_files[full_path] = true
             state.known_files[full_path] = true
+        elseif options.hide_same_dir then
+            dirname, basename = mp.utils.split_path(full_path)
+            if state.known_dirs[dirname] then
+                return
+            end
+            if dirname ~= "." then
+                state.known_dirs[dirname] = true
+            end
         end
 
         if options.hide_deleted then
@@ -414,7 +428,9 @@ function show_history(entries, resume, update)
             if matches > 0 then
                 title = protocol_stripped
             else
-                local dirname, basename = mp.utils.split_path(full_path)
+                if not dirname then
+                    dirname, basename = mp.utils.split_path(full_path)
+                end
                 title = basename ~= "" and basename or full_path
             end
         end
