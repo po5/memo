@@ -546,5 +546,9 @@ mp.add_key_binding("h", "memo-history", function()
     show_history(options.entries, false)
 end)
 
+mp.add_key_binding(nil, "memo-next", function()
+    memo_next()
+end)
+
 mp.register_event("file-loaded", file_load)
 mp.register_idle(idle)
