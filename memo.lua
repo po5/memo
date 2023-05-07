@@ -213,7 +213,7 @@ function open_menu()
         if not item.keep_open then
             close_menu()
         end
-        mp.commandv(table.unpack(item.value))
+        mp.commandv(unpack(item.value))
     end)
     osd.hidden = false
     draw_menu()
@@ -447,7 +447,7 @@ function show_history(entries, resume, update)
 
         if attempts > 0 and attempts % options.entries == 0 and #menu_items ~= item_count then
             item_count = #menu_items
-            local temp_items = {table.unpack(menu_items)}
+            local temp_items = {unpack(menu_items)}
             for i=1, options.entries - item_count do
                 table.insert(temp_items, {value = "ignore", keep_open = true})
             end
