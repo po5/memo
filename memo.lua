@@ -50,7 +50,7 @@ osd.z = 2000
 local osd_update = nil
 local width, height
 local margin_top, margin_bottom = 0, 0
-local font_size = mp.get_property_number("osd-font-size") or 25
+local font_size = mp.get_property_number("osd-font-size") or 55
 
 local history_path = mp.command_native({"expand-path", options.history_path})
 local history = io.open(history_path, "a+")
