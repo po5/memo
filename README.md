@@ -1,5 +1,5 @@
 # memo
-A recent files/history menu for mpv.
+A recent files menu for mpv.
 
 This script saves your watch history, and displays it in a nice menu.
 
