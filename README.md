@@ -10,8 +10,9 @@ Place memo.lua in your mpv `scripts` folder.
 Default settings are listed in memo.conf, copy it to your mpv `script-opts` folder to customize.
 
 The default key to open the history menu is **h**.  
-This script comes with a simple menu, which gets automatically enhanced for users of [uosc](https://github.com/tomasklaen/uosc).  
 Select a history entry to reopen the file.
+
+This script comes with a simple menu, which gets automatically enhanced for users of [uosc](https://github.com/tomasklaen/uosc).
 
 ## Custom keybinds
 Two keybinds are provided for use in `input.conf`.  
