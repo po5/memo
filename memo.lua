@@ -186,6 +186,7 @@ function close_menu()
     last_state = nil
     menu_data = nil
     menu_shown = false
+    osd:update()
     osd.hidden = true
     osd:update()
 end
