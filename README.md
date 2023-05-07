@@ -24,7 +24,8 @@ Brings up the recent files menu, or closes it if already open. Default key is **
 `memo-next`  
 Jumps to the next page of history entries, if there is one. Also opens the menu if it's closed.
 
-If you are not using [uosc](https://github.com/tomasklaen/uosc), vanilla menu navigation can be configured through `memo.conf`.
+uosc users can add a button to their uosc.conf `controls=` option with `command:history:script-binding memo-history?History`  
+Navigation keybinds for vanilla menu can be configured through `memo.conf`.
 
 ## Configuration
 All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.
