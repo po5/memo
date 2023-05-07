@@ -32,7 +32,7 @@ All further configuration, like the number of entries to show in menu, is done i
 
 ## What sets this apart from other history scripts?
 Some scripts only write a history file without the ability to navigate it.  
-Scripts that do, by design, read the entire file before displaying your files.  
+Scripts that do, by design, read the entire history before displaying your files.  
 This means they will get slower with time, while memo reads only what it needs.  
 Despite reading little data, it lets you browse as far back as you'd like.  
 The file format used allows you to retroactively change display and filtering options.  
