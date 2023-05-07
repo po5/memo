@@ -541,7 +541,7 @@ mp.register_script_message("memo-more", memo_more)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
-mp.add_key_binding(nil, "memo-history", function()
+mp.add_key_binding("h", "memo-history", function()
     if event_loop_exhausted then return end
     last_state = nil
     show_history(options.entries, false)
