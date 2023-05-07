@@ -260,10 +260,10 @@ function draw_menu(delay)
             local item = menu_data.items[i]
             if item.title then
                 local icon
-                if item.icon == "navigate_next" then
+                if item.icon == "spinner" then
+                    icon = "⟳ "
+                elseif item.icon == "navigate_next" then
                     icon = selected_index == i and "▶ - " or "▷- "
-                elseif item.icon == "spinner" then
-                    icon = selected_index == i and "⟳  - " or "⟳ - "
                 else
                     icon = selected_index == i and "●  - " or "○ - "
                 end
