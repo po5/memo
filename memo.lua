@@ -471,7 +471,7 @@ function show_history(entries, resume, update)
     last_state = state
 
     if options.pagination and #menu_items > 0 and state.cursor - max_digits_length > 0 then
-        table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-more"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
+        table.insert(menu_items, {title = "Older entries", value = {"script-message-to", script_name, "memo-next"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
     end
     if uosc_available then
         mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(menu_items))
@@ -531,12 +531,12 @@ function memo_clear()
     menu_shown = false
 end
 
-function memo_more()
+function memo_next()
     show_history(options.entries, true)
 end
 
 mp.register_script_message("memo-clear", memo_clear)
-mp.register_script_message("memo-more", memo_more)
+mp.register_script_message("memo-next", memo_next)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
