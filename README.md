@@ -55,6 +55,8 @@ profile-cond=string.match(string.lower(string.gsub(require "mp.utils".join_path(
 profile-restore=copy-equal
 script-opts-append=memo-enabled=no
 ```
+This will apply to future writes, but will not retroactively delete files from history if you opened them before.  
+Files can easily be manually removed from the history (by default at `~~/memo-history.log`). One entry per line.
 
 ## What sets this apart from other history scripts?
 Some scripts only write a history file without the ability to navigate it.  
