@@ -86,14 +86,24 @@ function utf8_iter(str)
         if #str < start then return nil end
         local byte_count = utf8_char_bytes(str, start)
         byte_start = start + byte_count
-        return start, str:sub(start, start + byte_count - 1)
+        return start, str:sub(start, byte_start - 1)
     end
 end
 
-function utf8_subwidth(str, start_index, end_index)
+function utf8_table(str)
+    local t = {}
+    local width = 0
+    for _, char in utf8_iter(str) do
+        width = width + (#char > 2 and 2 or 1)
+        table.insert(t, char)
+    end
+    return t, width
+end
+
+function utf8_subwidth(t, start_index, end_index)
     local index = 1
     local substr = ""
-    for _, char in utf8_iter(str) do
+    for _, char in ipairs(t) do
         if start_index <= index and index <= end_index then
             local width = #char > 2 and 2 or 1
             index = index + width
@@ -101,6 +111,19 @@ function utf8_subwidth(str, start_index, end_index)
         end
     end
     return substr, index
+end
+
+function utf8_subwidth_back(t, num_chars)
+    local index = 0
+    local substr = ""
+    for i = #t, 1, -1 do
+        if num_chars > index then
+            local width = #t[i] > 2 and 2 or 1
+            index = index + width
+            substr = t[i] .. substr
+        end
+    end
+    return substr
 end
 
 function ass_clean(str)
@@ -481,9 +504,24 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         title = title:gsub("\n", " ")
 
-        -- TODO: truncate that preserves file extension
-        if options.truncate_titles > 0 and #title > options.truncate_titles then
-            title = utf8_subwidth(title, 1, options.truncate_titles - 3) .. "..."
+        local title_chars, title_width = utf8_table(title)
+        if options.truncate_titles > 0 and title_width > options.truncate_titles then
+            local extension = string.match(title, "%.([^.][^.][^.]?[^.]?)$") or ""
+            local extra = #extension + 4
+            local title_sub, end_index = utf8_subwidth(title_chars, 1, options.truncate_titles - 3 - extra)
+            local title_trim = title_sub:gsub("[] ._'()?![]+$", "")
+            local around_extension = ""
+            if title_trim == "" then
+                title_trim = utf8_subwidth(title_chars, 1, options.truncate_titles - 3)
+            else
+                extra = extra + #title_sub - #title_trim
+                around_extension = utf8_subwidth_back(title_chars, extra)
+            end
+            if title_trim == "" then
+                title = utf8_subwidth(title_chars, 1, options.truncate_titles)
+            else
+                title = title_trim .. "..." .. around_extension
+            end
         end
 
         state.known_files[full_path] = true
