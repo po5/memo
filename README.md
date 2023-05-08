@@ -30,8 +30,15 @@ Jumps to the previous page of history entries, if there is one. Also opens the m
 `memo-last`  
 Opens the last non-deleted file that isn't the current file, and isn't in the same directory if `hide_same_dir=yes`. Also closes the menu if it's open.
 
-uosc users can add a button to their uosc.conf `controls=` option with `command:history:script-binding memo-history?History`  
-Navigation keybinds for vanilla menu can be configured through `memo.conf`.
+Navigation keybinds for vanilla menu can be configured through `script-opts/memo.conf`.
+
+## uosc menus and buttons
+Adding a menu: append ` #! History` to your `input.conf` keybind, or use this for a menu-only config.
+```
+# script-binding memo-history #! History
+```
+
+Adding a button above timeline: add `command:history:script-binding memo-history?History` to your uosc.conf `controls` option.
 
 ## Configuration
 All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.
