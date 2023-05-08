@@ -110,6 +110,14 @@ function ass_clean(str)
     return str
 end
 
+function shallow_copy(t)
+    local t2 = {}
+    for k,v in pairs(t) do
+        t2[k] = v
+    end
+    return t2
+end
+
 function menu_json(menu_items, native)
     local menu = {
         type = "memo-history",
@@ -289,11 +297,18 @@ function draw_menu(delay)
     osd:update()
 end
 
-function write_history()
+function get_full_path()
     local path = mp.get_property("path")
     if path == nil then return end
+
     local directory = path:find("^%a[%a%d-_]+:") == nil and mp.get_property("working-directory", "") or ""
     local full_path = mp.utils.join_path(directory, path)
+
+    return full_path
+end
+
+function write_history()
+    local full_path = get_full_path()
     local playlist_pos = mp.get_property_number("playlist-pos") or -1
     local title = playlist_pos > -1 and mp.get_property("playlist/"..playlist_pos.."/title") or ""
     local title_length = #title
@@ -307,7 +322,7 @@ function write_history()
     history:flush()
 end
 
-function show_history(entries, next_page, prev_page, update)
+function show_history(entries, next_page, prev_page, update, return_items)
     if event_loop_exhausted then return end
     event_loop_exhausted = true
 
@@ -319,7 +334,9 @@ function show_history(entries, next_page, prev_page, update)
         else
             close_menu()
         end
-        return
+        if not return_items then
+            return
+        end
     end
 
     local max_digits_length = 4 + 1
@@ -488,7 +505,7 @@ function show_history(entries, next_page, prev_page, update)
             end
         end
 
-        if attempts > 0 and attempts % options.entries == 0 and #menu_items ~= item_count then
+        if not return_items and attempts > 0 and attempts % options.entries == 0 and #menu_items ~= item_count then
             item_count = #menu_items
             local temp_items = {unpack(menu_items)}
             for i=1, options.entries - item_count do
@@ -516,6 +533,10 @@ function show_history(entries, next_page, prev_page, update)
         read_line()
 
         attempts = attempts + 1
+    end
+
+    if return_items then
+        return menu_items
     end
 
     if options.pagination and #menu_items > 0 then
@@ -600,14 +621,50 @@ mp.register_script_message("memo-clear", memo_clear)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
+mp.add_key_binding(nil, "memo-next", memo_next)
+mp.add_key_binding(nil, "memo-prev", memo_prev)
+mp.add_key_binding(nil, "memo-last", function()
+    if event_loop_exhausted then return end
+
+    local items
+    if last_state and last_state.current_page == 1 and options.hide_duplicates and options.hide_deleted and options.entries >= 2 then
+        -- menu is open and we for sure have everything we need
+        items = last_state.pages[1]
+        last_state = nil
+        show_history(0, false, false, false, true)
+    else
+        -- menu is closed or we may not have everything
+        local options_bak = shallow_copy(options)
+        options.pagination = false
+        options.hide_duplicates = true
+        options.hide_deleted = true
+        last_state = nil
+        items = show_history(2, false, false, false, true)
+        options = options_bak
+    end
+    if items then
+        local item
+        local full_path = get_full_path()
+        if #items >= 1 and not items[1].keep_open then
+            if items[1].value[2] ~= full_path then
+                item = items[1]
+            elseif #items >= 2 and not items[2].keep_open and items[2].value[2] ~= full_path then
+                item = items[2]
+            end
+        end
+
+        if item then
+            mp.commandv(unpack(item.value))
+            return
+        end
+    end
+    mp.osd_message("[memo] no recent files to open")
+end)
 mp.add_key_binding("h", "memo-history", function()
     if event_loop_exhausted then return end
     last_state = nil
     show_history(options.entries, false)
 end)
-
-mp.add_key_binding(nil, "memo-next", memo_next)
-mp.add_key_binding(nil, "memo-prev", memo_prev)
 
 mp.register_event("file-loaded", file_load)
 mp.register_idle(idle)

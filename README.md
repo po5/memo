@@ -15,7 +15,7 @@ Select a history entry to reopen the file.
 This script comes with a simple menu, which gets automatically enhanced for users of [uosc](https://github.com/tomasklaen/uosc).
 
 ## Custom keybinds
-Three keybinds are provided for use in `input.conf`.  
+Four keybinds are provided for use in `input.conf`.  
 Example usage: `h script-binding memo-history`
 
 `memo-history`  
@@ -26,6 +26,9 @@ Jumps to the next page of history entries, if there is one. Also opens the menu 
 
 `memo-prev`  
 Jumps to the previous page of history entries, if there is one. Also opens the menu if it's closed.
+
+`memo-last`  
+Opens the last non-deleted file that isn't the current file, and isn't in the same directory if `hide_same_dir=yes`. Also closes the menu if it's open.
 
 uosc users can add a button to their uosc.conf `controls=` option with `command:history:script-binding memo-history?History`  
 Navigation keybinds for vanilla menu can be configured through `memo.conf`.
