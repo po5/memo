@@ -36,6 +36,19 @@ Navigation keybinds for vanilla menu can be configured through `memo.conf`.
 ## Configuration
 All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.
 
+## Disabling for specific directories
+It is possible to disable logging of specific files with any criteria that can be queried through [auto profiles](https://mpv.io/manual/master/#conditional-auto-profiles).  
+Below is an example to exclude files when "MyCunnyFolder" is part of the directory path.  
+The first line goes in your main config, before any profiles.
+```ini
+script-opts-append=memo-enabled=yes
+
+[dont-log-my-porn]
+profile-cond=string.match(string.lower(string.gsub(require "mp.utils".join_path(get("working-directory", ""), get("path", "")), string.gsub(get("filename", ""), "([^%w])", "%%%1").."$", "")), "mycunnyfolder")~=nil
+profile-restore=copy-equal
+script-opts-append=memo-enabled=no
+```
+
 ## What sets this apart from other history scripts?
 Some scripts only write a history file without the ability to navigate it.  
 Scripts that do, by design, read the entire history before displaying your files.  
