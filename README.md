@@ -41,7 +41,8 @@ Adding a menu: append ` #! History` to your `input.conf` keybind, or use this fo
 Adding a button above timeline: add `command:history:script-binding memo-history?History` to your uosc.conf `controls` option.
 
 ## Configuration
-All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.
+All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.  
+A file with all default options and their descriptions is included in the repo.
 
 ## Disabling for specific directories
 It is possible to disable logging of specific files with any criteria that can be queried through [auto profiles](https://mpv.io/manual/master/#conditional-auto-profiles).  
