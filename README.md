@@ -46,7 +46,7 @@ All further configuration, like the number of entries to show in menu, is done i
 ## Disabling for specific directories
 It is possible to disable logging of specific files with any criteria that can be queried through [auto profiles](https://mpv.io/manual/master/#conditional-auto-profiles).  
 Below is an example to exclude files when "MyCunnyFolder" is part of the directory path.  
-The first line goes in your main config, before any profiles.
+This goes in `mpv.conf`. The first line should be placed at the top, before any profiles.
 ```ini
 script-opts-append=memo-enabled=yes
 
