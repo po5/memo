@@ -442,6 +442,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
         history:seek("set", state.cursor)
 
         local entry = history:read(entry_length)
+        if not entry then
+            mp.msg.debug("unreadable entry data @ " .. state.cursor)
+            return
+        end
         local timestamp_str, title_length_str, file_info = entry:match("([^,]*),(%d*),(.*)")
         if not timestamp_str then
             mp.msg.debug("invalid entry data @ " .. state.cursor)
