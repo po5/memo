@@ -334,6 +334,8 @@ end
 
 function write_history()
     local full_path = get_full_path()
+    if full_path == nil then return end
+
     local playlist_pos = mp.get_property_number("playlist-pos") or -1
     local title = playlist_pos > -1 and mp.get_property("playlist/"..playlist_pos.."/title") or ""
     local title_length = #title
