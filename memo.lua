@@ -343,6 +343,7 @@ function write_history()
     local entry = timestamp .. "," .. (title_length > 0 and title_length or "") .. "," .. title .. "," .. full_path
     local entry_length = #entry
 
+    history:seek("end")
     history:write(entry .. "," .. entry_length, "\n")
     history:flush()
 end
