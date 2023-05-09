@@ -245,6 +245,7 @@ function open_menu()
     bind_keys(options.close_binding, "close", close_menu)
     bind_keys(options.select_binding, "select", function()
         local item = menu_data.items[menu_data.selected_index]
+        if not item then return end
         if not item.keep_open then
             close_menu()
         end
@@ -548,13 +549,13 @@ function show_history(entries, next_page, prev_page, update, return_items)
             item_count = #menu_items
             local temp_items = {unpack(menu_items)}
             for i=1, options.entries - item_count do
-                table.insert(temp_items, {value = "ignore", keep_open = true})
+                table.insert(temp_items, {value = {"ignore"}, keep_open = true})
             end
 
-            table.insert(temp_items, {title = "Loading...", value = "ignore", italic = "true", muted = "true", icon = "spinner", keep_open = true})
+            table.insert(temp_items, {title = "Loading...", value = {"ignore"}, italic = "true", muted = "true", icon = "spinner", keep_open = true})
 
             if next_page and last_state then
-                table.insert(temp_items, {value = "ignore", keep_open = true})
+                table.insert(temp_items, {value = {"ignore"}, keep_open = true})
             end
 
             if uosc_available then
