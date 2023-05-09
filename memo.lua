@@ -427,6 +427,11 @@ function show_history(entries, next_page, prev_page, update, return_items)
             state.cursor = math.max(state.cursor - retry_offset, 0)
             history:seek("set", state.cursor)
             local retry = history:read(retry_offset)
+            if not retry then
+                mp.msg.debug("retry failed @ " .. state.cursor)
+                state.cursor = 0
+                return
+            end
             local last_valid = string.match(retry, ".*(%d+\n.*)")
             local offset = last_valid and #last_valid or retry_offset
             state.cursor = state.cursor + retry_offset - offset + 1
