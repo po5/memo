@@ -67,6 +67,7 @@ This means they will get slower with time, while memo reads only what it needs.
 Despite reading little data, it lets you browse as far back as you'd like.  
 The file format used allows you to retroactively change display and filtering options.  
 It supports displaying titles of YouTube and other web videos.  
+History is global and works across multiple instances of mpv.  
 This is the nicest menu out of all history scripts I know about, and has uosc integration.
 
 ## Acknowledgements
