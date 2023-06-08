@@ -57,6 +57,15 @@ local font_size = mp.get_property_number("osd-font-size") or 55
 
 local history_path = mp.command_native({"expand-path", options.history_path})
 local history = io.open(history_path, "a+b")
+if history == nil then
+    history = io.open(history_path, "rb")
+    if history then
+        mp.msg.warn("cannot write to history file " .. options.history_path .. ", using read-only mode")
+    else
+        mp.msg.error("cannot write to history file " .. options.history_path .. ", exiting")
+        return
+    end
+end
 local last_state = nil
 history:setvbuf("full")
 
