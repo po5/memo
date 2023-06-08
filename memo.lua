@@ -548,6 +548,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 if stat then
                     state.existing_files[full_path] = true
                 else
+                    state.known_files[full_path] = true
                     return
                 end
             end
