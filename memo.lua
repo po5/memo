@@ -3,7 +3,7 @@
 -- A recent files menu for mpv
 
 local options = {
-    -- File path gets extended
+    -- File path gets expanded, leave empty for in-memory history
     history_path = "~~/memo-history.log",
 
     -- How many entries to display in menu
@@ -55,16 +55,58 @@ local width, height
 local margin_top, margin_bottom = 0, 0
 local font_size = mp.get_property_number("osd-font-size") or 55
 
-local history_path = mp.command_native({"expand-path", options.history_path})
-local history = io.open(history_path, "a+b")
-if history == nil then
-    history = io.open(history_path, "rb")
-    if history then
-        mp.msg.warn("cannot write to history file " .. options.history_path .. ", using read-only mode")
-    else
-        mp.msg.error("cannot write to history file " .. options.history_path .. ", exiting")
-        return
+local fakeio = {data = "", cursor = 0, offset = 0, file = nil}
+function fakeio:setvbuf(mode) end
+function fakeio:flush()
+    self.cursor = self.offset + #self.data
+end
+function fakeio:read(format)
+    local out = ""
+    if self.cursor < self.offset then
+        local memory_side = self.offset - self.cursor
+        self.file:seek("set", self.cursor)
+        out = self.file:read(format)
+        format = format - #out
+        self.cursor = self.cursor + #out
     end
+    if format > 0 then
+        out = out .. self.data:sub(self.cursor - self.offset, self.cursor - self.offset + format)
+        self.cursor = self.cursor + format
+    end
+    return out
+end
+function fakeio:seek(whence, offset)
+    local base = 0
+    offset = offset or 0
+    if whence == "end" then
+        base = self.offset + #self.data
+    end
+    self.cursor = base + offset
+    return self.cursor
+end
+function fakeio:write(...)
+    local args = {...}
+    for i, v in ipairs(args) do
+        self.data = self.data .. v
+    end
+end
+
+local history, history_path
+
+if options.history_path ~= "" then
+    history_path = mp.command_native({"expand-path", options.history_path})
+    history = io.open(history_path, "a+b")
+end
+if history == nil then
+    if history_path then
+        mp.msg.warn("cannot write to history file " .. options.history_path .. ", new entries will not be saved to disk")
+        history = io.open(history_path, "rb")
+        if history then
+            fakeio.offset = history:seek("end")
+            fakeio.file = history
+        end
+    end
+    history = fakeio
 end
 local last_state = nil
 history:setvbuf("full")
