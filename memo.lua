@@ -344,7 +344,7 @@ function draw_menu(delay)
 
     if #menu_data.items > 0 then
         local menu_index = 0
-        for i=1, #menu_data.items do
+        for i = 1, #menu_data.items do
             local item = menu_data.items[i]
             if item.title then
                 local icon
@@ -441,15 +441,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
     if last_state then
         if prev_page then
-            if state.current_page == 1 then
-                return
-            end
+            if state.current_page == 1 then return end
             state.current_page = state.current_page - 1
         elseif next_page then
-            if state.cursor == 0 and not state.pages[state.current_page + 1] then
-                return
-            end
-
+            if state.cursor == 0 and not state.pages[state.current_page + 1] then return end
             state.current_page = state.current_page + 1
         end
     end
@@ -618,7 +613,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
         if not return_items and attempts > 0 and attempts % options.entries == 0 and #menu_items ~= item_count then
             item_count = #menu_items
             local temp_items = {unpack(menu_items)}
-            for i=1, options.entries - item_count do
+            for i = 1, options.entries - item_count do
                 table.insert(temp_items, {value = {"ignore"}, keep_open = true})
             end
 
