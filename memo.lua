@@ -37,6 +37,7 @@ local options = {
     up_binding = "UP WHEEL_UP",
     down_binding = "DOWN WHEEL_DOWN",
     select_binding = "RIGHT ENTER",
+    append_binding = "Shift+RIGHT Shift+ENTER",
     close_binding = "LEFT ESC",
 }
 
@@ -269,6 +270,7 @@ function close_menu()
     unbind_keys(options.up_binding, "move_up")
     unbind_keys(options.down_binding, "move_down")
     unbind_keys(options.select_binding, "select")
+    unbind_keys(options.append_binding, "append")
     unbind_keys(options.close_binding, "close")
     last_state = nil
     menu_data = nil
@@ -294,7 +296,6 @@ function open_menu()
         menu_data.selected_index = math.min(menu_data.selected_index + 1, #menu_data.items)
         draw_menu()
     end, { repeatable = true })
-    bind_keys(options.close_binding, "close", close_menu)
     bind_keys(options.select_binding, "select", function()
         local item = menu_data.items[menu_data.selected_index]
         if not item then return end
@@ -303,6 +304,28 @@ function open_menu()
         end
         mp.commandv(unpack(item.value))
     end)
+    bind_keys(options.append_binding, "append", function()
+        local item = menu_data.items[menu_data.selected_index]
+        if not item then return end
+        if not item.keep_open then
+            close_menu()
+        end
+        if item.value[1] == "loadfile" then
+            -- bail if file is already in playlist
+            local directory = mp.get_property("working-directory", "")
+            local playlist = mp.get_property_native("playlist", {})
+            for i = 1, #playlist do
+                local playlist_file = playlist[i].filename
+                playlist_file = mp.utils.join_path(playlist_file:find("^%a[%a%d-_]+:") == nil and directory or "", playlist_file)
+                if item.value[2] == playlist_file then
+                    return
+                end
+            end
+            table.insert(item.value, "append-play")
+        end
+        mp.commandv(unpack(item.value))
+    end)
+    bind_keys(options.close_binding, "close", close_menu)
     osd.hidden = false
     draw_menu()
 end
