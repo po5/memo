@@ -118,16 +118,17 @@ local menu_data = nil
 
 function utf8_char_bytes(str, i)
     local char_byte = str:byte(i)
+    local max_bytes = #str - i + 1
     if char_byte < 0xC0 then
-        return 1
+        return math.min(max_bytes, 1)
     elseif char_byte < 0xE0 then
-        return 2
+        return math.min(max_bytes, 2)
     elseif char_byte < 0xF0 then
-        return 3
+        return math.min(max_bytes, 3)
     elseif char_byte < 0xF8 then
-        return 4
+        return math.min(max_bytes, 4)
     else
-        return 1
+        return math.min(max_bytes, 1)
     end
 end
 
@@ -573,23 +574,25 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         title = title:gsub("\n", " ")
 
-        local title_chars, title_width = utf8_table(title)
-        if options.truncate_titles > 0 and title_width > options.truncate_titles then
-            local extension = string.match(title, "%.([^.][^.][^.]?[^.]?)$") or ""
-            local extra = #extension + 4
-            local title_sub, end_index = utf8_subwidth(title_chars, 1, options.truncate_titles - 3 - extra)
-            local title_trim = title_sub:gsub("[] ._'()?![]+$", "")
-            local around_extension = ""
-            if title_trim == "" then
-                title_trim = utf8_subwidth(title_chars, 1, options.truncate_titles - 3)
-            else
-                extra = extra + #title_sub - #title_trim
-                around_extension = utf8_subwidth_back(title_chars, extra)
-            end
-            if title_trim == "" then
-                title = utf8_subwidth(title_chars, 1, options.truncate_titles)
-            else
-                title = title_trim .. "..." .. around_extension
+        if options.truncate_titles > 0 then
+            local title_chars, title_width = utf8_table(title)
+            if title_width > options.truncate_titles then
+                local extension = string.match(title, "%.([^.][^.][^.]?[^.]?)$") or ""
+                local extra = #extension + 4
+                local title_sub, end_index = utf8_subwidth(title_chars, 1, options.truncate_titles - 3 - extra)
+                local title_trim = title_sub:gsub("[] ._'()?![]+$", "")
+                local around_extension = ""
+                if title_trim == "" then
+                    title_trim = utf8_subwidth(title_chars, 1, options.truncate_titles - 3)
+                else
+                    extra = extra + #title_sub - #title_trim
+                    around_extension = utf8_subwidth_back(title_chars, extra)
+                end
+                if title_trim == "" then
+                    title = utf8_subwidth(title_chars, 1, options.truncate_titles)
+                else
+                    title = title_trim .. "..." .. around_extension
+                end
             end
         end
 
