@@ -109,13 +109,14 @@ if history == nil then
     end
     history = fakeio
 end
-local last_state = nil
 history:setvbuf("full")
 
 local event_loop_exhausted = false
 local uosc_available = false
 local menu_shown = false
+local last_state = nil
 local menu_data = nil
+local search_words = nil
 
 function utf8_char_bytes(str, i)
     local char_byte = str:byte(i)
@@ -274,6 +275,7 @@ function close_menu()
     unbind_keys(options.close_binding, "close")
     last_state = nil
     menu_data = nil
+    search_words = nil
     menu_shown = false
     osd:update()
     osd.hidden = true
@@ -434,12 +436,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
     local should_close = menu_shown and not prev_page and not next_page and not update
     if should_close then
-        menu_shown = false
-        if uosc_available then
-            mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
-        else
-            close_menu()
-        end
+        memo_close()
         if not return_items then
             return
         end
@@ -543,6 +540,14 @@ function show_history(entries, next_page, prev_page, update, return_items)
             return
         end
 
+        if search_words and not options.use_titles then
+            for _, word in ipairs(search_words) do
+                if full_path:lower():find(word) == nil then
+                    return
+                end
+            end
+        end
+
         local dirname, basename
 
         if full_path:find("^%a[%a%d-_]+:") ~= nil then
@@ -591,6 +596,14 @@ function show_history(entries, next_page, prev_page, update, return_items)
         end
 
         title = title:gsub("\n", " ")
+
+        if search_words and options.use_titles then
+            for _, word in ipairs(search_words) do
+                if title:lower():find(word) == nil then
+                    return
+                end
+            end
+        end
 
         if options.truncate_titles > 0 then
             local title_chars, title_width = utf8_table(title)
@@ -731,9 +744,19 @@ mp.register_script_message("uosc-version", function(version)
     uosc_available = not semver_comp(version, min_version)
 end)
 
+function memo_close()
+    menu_shown = false
+    if uosc_available then
+        mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
+    else
+        close_menu()
+    end
+end
+
 function memo_clear()
     if event_loop_exhausted then return end
     last_state = nil
+    search_words = nil
     menu_shown = false
 end
 
@@ -745,7 +768,24 @@ function memo_next()
     show_history(options.entries, true)
 end
 
+function memo_search(...)
+    -- close REPL
+    mp.commandv("keypress", "ESC")
+
+    local words = {...}
+    if #words > 0 then
+        -- escape keywords
+        for i, word in ipairs(words) do
+            words[i] = word:lower():gsub("%W", "%%%1")
+        end
+        search_words = words
+    end
+
+    show_history(options.entries, false)
+end
+
 mp.register_script_message("memo-clear", memo_clear)
+mp.register_script_message("memo-search:", memo_search)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
@@ -755,7 +795,7 @@ mp.add_key_binding(nil, "memo-last", function()
     if event_loop_exhausted then return end
 
     local items
-    if last_state and last_state.current_page == 1 and options.hide_duplicates and options.hide_deleted and options.entries >= 2 then
+    if last_state and last_state.current_page == 1 and options.hide_duplicates and options.hide_deleted and options.entries >= 2 and not search_words then
         -- menu is open and we for sure have everything we need
         items = last_state.pages[1]
         last_state = nil
@@ -767,6 +807,7 @@ mp.add_key_binding(nil, "memo-last", function()
         options.hide_duplicates = true
         options.hide_deleted = true
         last_state = nil
+        search_words = nil
         items = show_history(2, false, false, false, true)
         options = options_bak
     end
@@ -788,9 +829,16 @@ mp.add_key_binding(nil, "memo-last", function()
     end
     mp.osd_message("[memo] no recent files to open")
 end)
+mp.add_key_binding(nil, "memo-search", function()
+    if menu_shown then
+        memo_close()
+    end
+    mp.commandv("script-message-to", "console", "type", "script-message memo-search: ")
+end)
 mp.add_key_binding("h", "memo-history", function()
     if event_loop_exhausted then return end
     last_state = nil
+    search_words = nil
     show_history(options.entries, false)
 end)
 

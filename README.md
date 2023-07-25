@@ -16,7 +16,7 @@ This script comes with a simple menu, which gets automatically enhanced for user
 Make sure you are on the latest version of mpv (and uosc if you use it) when reporting issues.
 
 ## Custom keybinds
-Four keybinds are provided for use in `input.conf`.  
+Five keybinds are provided for use in `input.conf`.  
 Example usage: `h script-binding memo-history`
 
 `memo-history`  
@@ -30,6 +30,9 @@ Jumps to the previous page of history entries, if there is one. Also opens the m
 
 `memo-last`  
 Opens the last non-deleted file that isn't the current file, and isn't in the same directory if `hide_same_dir=yes`. Also closes the menu if it's open.
+
+`memo-search`  
+Brings up a search box, type your keywords and press Enter. This finds entries that contain every keyword. Enclose your search in double quotes for exact matches.
 
 Navigation keybinds for vanilla menu can be configured through `script-opts/memo.conf`.
 
@@ -64,7 +67,7 @@ Files can easily be manually removed from the history (by default at `~~/memo-hi
 Some scripts only write a history file without the ability to navigate it.  
 Scripts that do, by design, read the entire history before displaying your files.  
 This means they will get slower with time, while memo reads only what it needs.  
-Despite reading little data, it lets you browse as far back as you'd like.  
+Despite reading little data, it lets you browse as far back as you'd like. It even has a search feature!  
 The file format used allows you to retroactively change display and filtering options.  
 It supports displaying titles of YouTube and other web videos.  
 History is global and works across multiple instances of mpv by default, can be set to per-instance volatile history as well.  
