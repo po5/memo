@@ -45,7 +45,7 @@ local script_name = mp.get_script_name()
 
 mp.utils = require "mp.utils"
 mp.options = require "mp.options"
-mp.options.read_options(options, "memo")
+mp.options.read_options(options, "memo", function(list) end)
 
 local assdraw = require "mp.assdraw"
 
@@ -712,8 +712,6 @@ function show_history(entries, next_page, prev_page, update, return_items)
 end
 
 function file_load()
-    mp.options.read_options(options, "memo")
-
     if options.enabled then
         write_history()
     end
