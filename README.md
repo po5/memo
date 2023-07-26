@@ -56,7 +56,7 @@ This goes in `mpv.conf`. The first line should be placed at the top, before any 
 script-opts-append=memo-enabled=yes
 
 [dont-log-my-porn]
-profile-cond=string.match(string.lower(string.gsub(require "mp.utils".join_path(get("working-directory", ""), get("path", "")), string.gsub(get("filename", ""), "([^%w])", "%%%1").."$", "")), "mycunnyfolder")~=nil
+profile-cond=require "mp.utils".join_path(get("working-directory", ""), get("path", "")):sub(1, -get("filename", ""):len() - 1):lower():match("mycunnyfolder")~=nil
 profile-restore=copy-equal
 script-opts-append=memo-enabled=no
 ```
