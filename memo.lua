@@ -117,6 +117,7 @@ local menu_shown = false
 local last_state = nil
 local menu_data = nil
 local search_words = nil
+local search_query = nil
 
 function utf8_char_bytes(str, i)
     local char_byte = str:byte(i)
@@ -197,9 +198,10 @@ function shallow_copy(t)
 end
 
 function menu_json(menu_items, native)
+    local title = search_query or "History"
     local menu = {
         type = "memo-history",
-        title = "History (memo)",
+        title = title .. " (memo)",
         items = menu_items,
         selected_index = 1,
         on_close = {"script-message-to", script_name, "memo-clear"}
@@ -276,6 +278,7 @@ function close_menu()
     last_state = nil
     menu_data = nil
     search_words = nil
+    search_query = nil
     menu_shown = false
     osd:update()
     osd.hidden = true
@@ -358,7 +361,7 @@ function draw_menu(delay)
     ass:draw_stop()
     ass:new_event()
 
-    ass:append("{\\pos("..(0.3 * font_size).."," .. (margin_top * height + 0.1 * font_size) .. ")\\an7\\fs" .. font_size .. "\\bord2\\q2\\b1}" .. menu_data.title .. "{\\b0}")
+    ass:append("{\\pos("..(0.3 * font_size).."," .. (margin_top * height + 0.1 * font_size) .. ")\\an7\\fs" .. font_size .. "\\bord2\\q2\\b1}" .. ass_clean(menu_data.title) .. "{\\b0}")
     ass:new_event()
 
     local scrolled_lines = get_scrolled_lines() - 1
@@ -761,6 +764,7 @@ function memo_clear()
     if event_loop_exhausted then return end
     last_state = nil
     search_words = nil
+    search_query = nil
     menu_shown = false
 end
 
@@ -778,6 +782,8 @@ function memo_search(...)
 
     local words = {...}
     if #words > 0 then
+        search_query = table.concat(words, " ")
+
         -- escape keywords
         for i, word in ipairs(words) do
             words[i] = word:lower():gsub("%W", "%%%1")
