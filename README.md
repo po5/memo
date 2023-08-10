@@ -54,7 +54,7 @@ Below is an example to exclude files when "MyCunnyFolder" is part of the directo
 This goes in `mpv.conf`.
 ```ini
 [dont-log-my-porn]
-profile-cond=require "mp.utils".join_path(get("working-directory", ""), get("path", "")):sub(1, -get("filename", ""):len() - 1):lower():match("mycunnyfolder")~=nil
+profile-cond=require "mp.utils".join_path(get("working-directory", ""), get("path", "")):sub(1, -get("filename", ""):len() - 1):lower():find("mycunnyfolder", 1, true)~=nil
 profile-restore=copy-equal
 script-opts-append=memo-enabled=no
 ```
