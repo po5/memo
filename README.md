@@ -50,11 +50,11 @@ A file with all default options and their descriptions is included in the repo.
 
 ## Disabling for specific directories
 It is possible to disable logging of specific files with any criteria that can be queried through [auto profiles](https://mpv.io/manual/master/#conditional-auto-profiles).  
-Below is an example to exclude files when "MyCunnyFolder" is part of the directory path.  
+Below is an example to exclude files when "MyCunnyFolder" or "MyCunnyFolder2" is part of the directory path.  
 This goes in `mpv.conf`.
 ```ini
 [dont-log-my-porn]
-profile-cond=require "mp.utils".join_path(get("working-directory", ""), get("path", "")):sub(1, -get("filename", ""):len() - 1):lower():find("mycunnyfolder", 1, true)~=nil
+profile-cond=(function() local ignored, path = {"mycunnyfolder", "mycunnyfolder2"}, require "mp.utils".join_path(get("working-directory", ""), get("path", "")):sub(1, -get("filename", ""):len()-1):lower() for _, ig in ipairs(ignored) do if path:find(ig, 1, true) then return true end end end)()
 profile-restore=copy-equal
 script-opts-append=memo-enabled=no
 ```
