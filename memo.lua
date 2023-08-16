@@ -462,11 +462,15 @@ function path_info(full_path)
         elseif protocol and not stacked_protocols[protocol] then
             local input_path, file_options
             if device_protocols[protocol] then
-                if protocol == "dvb" then
-                    is_remote = true
-                end
                 input_path, file_options = display_path:match("(.-) %-%-opt=(.+)")
                 effective_path = file_options and file_options:match(".+=(.*)")
+                if protocol == "dvb" then
+                    is_remote = true
+                    if not effective_path then
+                        effective_path = display_path
+                        input_path = display_path:sub(protocol_end + 1)
+                    end
+                end
                 display_path = input_path or display_path:sub(protocol_start, protocol_end)
             else
                 is_remote = true
