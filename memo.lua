@@ -525,16 +525,22 @@ function path_info(full_path)
     return display_path, effective_path, effective_protocol, is_remote, file_options
 end
 
-function write_history()
+function write_history(display)
     local full_path = get_full_path()
     if full_path == nil then
         mp.msg.debug("cannot get full path to file")
+        if display then
+            mp.osd_message("[memo] cannot get full path to file")
+        end
         return
     end
 
     local display_path, effective_path, effective_protocol, is_remote, file_options = path_info(full_path)
     if data_protocols[effective_protocol] then
         mp.msg.debug("not logging file with " .. effective_protocol .. " protocol")
+        if display then
+            mp.osd_message("[memo] not logging file with " .. effective_protocol .. " protocol")
+        end
         return
     end
 
@@ -552,6 +558,9 @@ function write_history()
     end
 
     mp.msg.debug("logging file " .. full_path)
+    if display then
+        mp.osd_message("[memo] logging file " .. full_path)
+    end
 
     local playlist_pos = mp.get_property_number("playlist-pos") or -1
     local title = playlist_pos > -1 and mp.get_property("playlist/"..playlist_pos.."/title") or ""
@@ -939,6 +948,9 @@ mp.command_native_async({"script-message-to", "uosc", "get-version", script_name
 
 mp.add_key_binding(nil, "memo-next", memo_next)
 mp.add_key_binding(nil, "memo-prev", memo_prev)
+mp.add_key_binding(nil, "memo-log", function()
+    write_history(true)
+end)
 mp.add_key_binding(nil, "memo-last", function()
     if event_loop_exhausted then return end
 

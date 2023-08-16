@@ -16,7 +16,7 @@ This script comes with a simple menu, which gets automatically enhanced for user
 Make sure you are on the latest version of mpv (and uosc if you use it) when reporting issues.
 
 ## Custom keybinds
-Five keybinds are provided for use in `input.conf`.  
+Six keybinds are provided for use in `input.conf`.  
 Example usage: `h script-binding memo-history`
 
 `memo-history`  
@@ -33,6 +33,9 @@ Opens the last non-deleted file that isn't the current file, and isn't in the sa
 
 `memo-search`  
 Brings up a search box, type your keywords and press Enter. This finds entries that contain every keyword. Enclose your search in double quotes for exact matches.
+
+`memo-log`  
+Writes an entry for the current file. Intended for manual bookmarking with `enabled=no`.
 
 Navigation keybinds for vanilla menu can be configured through `script-opts/memo.conf`.
 
