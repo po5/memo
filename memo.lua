@@ -229,6 +229,10 @@ function shallow_copy(t)
     return t2
 end
 
+function has_protocol(path)
+    return path:find("^%a[%w.+-]-://") or path:find("^%a[%w.+-]-:%?")
+end
+
 function menu_json(menu_items, native)
     local title = search_query or "History"
     local menu = {
@@ -353,7 +357,9 @@ function open_menu()
             local playlist = mp.get_property_native("playlist", {})
             for i = 1, #playlist do
                 local playlist_file = playlist[i].filename
-                playlist_file = mp.utils.join_path((playlist_file:find("^%a[%w.+-]-://") == nil and playlist_file:find("^%a[%w.+-]-:%?") == nil) and directory or "", playlist_file)
+                if not has_protocol(playlist_file) then
+                    playlist_file = mp.utils.join_path(directory, playlist_file)
+                end
                 if item.value[2] == playlist_file then
                     return
                 end
@@ -444,14 +450,17 @@ function get_full_path()
     local path = mp.get_property("path")
     if path == nil or path == "-" or path == "/dev/stdin" then return end
 
-    local directory = (path:find("^%a[%w.+-]-://") == nil and path:find("^%a[%w.+-]-:%?") == nil) and mp.get_property("working-directory", "") or ""
-    local full_path = mp.utils.join_path(directory, path)
+    if not has_protocol(path) then
+        local directory = mp.get_property("working-directory", "")
+        path = mp.utils.join_path(directory, path)
+    end
 
-    return full_path
+
+    return path
 end
 
 function path_info(full_path)
-    function resolve(effective_path, display_path, last_protocol, is_remote)
+    local function resolve(effective_path, display_path, last_protocol, is_remote)
         local protocol_start, protocol_end, protocol = display_path:find("^(%a[%w.+-]-)://")
 
         if protocol == "ytdl" then
