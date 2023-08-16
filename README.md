@@ -6,8 +6,8 @@ This script saves your watch history, and displays it in a nice menu.
 ![Preview](https://user-images.githubusercontent.com/42466980/236659593-59d6b517-c560-4a2f-b30c-cb8daf7050e2.png)
 
 ## Installation
-Place memo.lua in your mpv `scripts` folder.  
-Default settings are listed in memo.conf, copy it to your mpv `script-opts` folder to customize.
+Place **memo.lua** in your mpv `scripts` folder.  
+Default settings are listed in **memo.conf**, copy it to your mpv `script-opts` folder to customize.
 
 The default key to open the history menu is **h**.  
 Select a history entry to reopen the file.
@@ -45,7 +45,7 @@ Adding a menu: append ` #! History` to your `input.conf` keybind, or use this fo
 # script-binding memo-history #! History
 ```
 
-Adding a button above timeline: add `command:history:script-binding memo-history?History` to your uosc.conf `controls` option.
+Adding a button above timeline: add `command:history:script-binding memo-history?History` to your **uosc.conf** `controls` option.
 
 ## Configuration
 All further configuration, like the number of entries to show in menu, is done in `script-opts/memo.conf`.  
