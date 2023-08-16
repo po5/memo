@@ -54,7 +54,7 @@ Below is an example to exclude files when "MyCunnyFolder" or "AnotherSecretFolde
 This goes in `mpv.conf`.
 ```ini
 [dont-log-my-porn]
-profile-cond=(function() local ignored, path = {"mycunnyfolder", "anothersecretfolder"}, get("path", "") path = (path:find("^%a[%w.+-]-:[/?]") and path or require "mp.utils".join_path(get("working-directory", ""), path)):sub(1, -get("filename", ""):len()-1):lower() for _, ig in ipairs(ignored) do if path:find(ig, 1, true) then return true end end end)()
+profile-cond=(function() local ignored, path = {"mycunnyfolder", "anothersecretfolder"}, get("path", "") path = ((path:find("^%a[%w.+-]-://") or path:find("^%a[%w.+-]-:%?")) and path or require "mp.utils".join_path(get("working-directory", ""), path)):sub(1, -get("filename", ""):len()-1):lower() for _, ig in ipairs(ignored) do if path:find(ig, 1, true) then return true end end end)()
 profile-restore=copy-equal
 script-opts-append=memo-enabled=no
 ```

@@ -353,7 +353,7 @@ function open_menu()
             local playlist = mp.get_property_native("playlist", {})
             for i = 1, #playlist do
                 local playlist_file = playlist[i].filename
-                playlist_file = mp.utils.join_path(playlist_file:find("^%a[%w.+-]-:[/?]") == nil and directory or "", playlist_file)
+                playlist_file = mp.utils.join_path((playlist_file:find("^%a[%w.+-]-://") == nil and playlist_file:find("^%a[%w.+-]-:%?") == nil) and directory or "", playlist_file)
                 if item.value[2] == playlist_file then
                     return
                 end
@@ -444,17 +444,15 @@ function get_full_path()
     local path = mp.get_property("path")
     if path == nil or path == "-" or path == "/dev/stdin" then return end
 
-    local directory = path:find("^%a[%w.+-]-:[/?]") == nil and mp.get_property("working-directory", "") or ""
+    local directory = (path:find("^%a[%w.+-]-://") == nil and path:find("^%a[%w.+-]-:%?") == nil) and mp.get_property("working-directory", "") or ""
     local full_path = mp.utils.join_path(directory, path)
 
     return full_path
 end
 
 function path_info(full_path)
-    local protocol_regex = "^(%a[%w.+-]-):[/?]/?"
-
     function resolve(effective_path, display_path, last_protocol, is_remote)
-        local protocol_start, protocol_end, protocol = display_path:find(protocol_regex)
+        local protocol_start, protocol_end, protocol = display_path:find("^(%a[%w.+-]-)://")
 
         if protocol == "ytdl" then
             -- for direct video access ytdl://videoID and ytsearch:
@@ -504,6 +502,12 @@ function path_info(full_path)
         end
 
         return resolve(effective_path, display_path, protocol, is_remote)
+    end
+
+    -- don't resolve magnet-style paths
+    local protocol_start, protocol_end, protocol = full_path:find("^(%a[%w.+-]-):%?")
+    if protocol_end then
+        return full_path, full_path, protocol, true, nil
     end
 
     local display_path, effective_path, effective_protocol, is_remote, file_options = resolve(nil, full_path, nil, false)
