@@ -39,13 +39,47 @@ local options = {
     select_binding = "RIGHT ENTER",
     append_binding = "Shift+RIGHT Shift+ENTER",
     close_binding = "LEFT ESC",
+
+    -- Path prefixes for the recent directory menu
+    -- This can be used to restrict the parent directory relative to which the
+    -- directories are shown.
+    -- Syntax
+    --   Prefixes are separated by | and can use Lua patterns by prefixing
+    --   them with "pattern:", otherwise they will be treated as plain text.
+    --   Pattern syntax can be found here https://www.lua.org/manual/5.1/manual.html#5.4.1
+    -- Example
+    --   path_prefixes="My-Movies|pattern:TV Shows/.-/|Anime" will show directories
+    --   that are direct subdirectories of directories named "My-Movies" as well as
+    --   "Anime", while for TV Shows the shown directories are one level below that.
+    --   Opening the file "/data/TV Shows/Comedy/Curb Your Enthusiasm/S4/E06.mkv" will
+    --   lead to "Curb Your Enthusiasm" to be shown in the directory menu. Opening
+    --   of that entry will then open that file again.
+    path_prefixes = "pattern:.*"
 }
+
+function parse_path_prefixes(path_prefixes)
+    local plain = {}
+    local pattern = {}
+    for prefix in path_prefixes:gmatch('([^|]+)') do
+        if prefix:find("pattern:", 1, true) == 1 then
+            pattern[#pattern + 1] = prefix:sub(9)
+        else
+            plain[#plain + 1] = prefix
+        end
+    end
+    return {plain = plain, pattern = pattern}
+end
 
 local script_name = mp.get_script_name()
 
 mp.utils = require "mp.utils"
 mp.options = require "mp.options"
-mp.options.read_options(options, "memo", function(list) end)
+mp.options.read_options(options, "memo", function(list)
+    if list.path_prefixes then
+        options.path_prefixes = parse_path_prefixes(options.path_prefixes)
+    end
+end)
+options.path_prefixes = parse_path_prefixes(options.path_prefixes)
 
 local assdraw = require "mp.assdraw"
 
@@ -111,6 +145,33 @@ if history == nil then
 end
 history:setvbuf("full")
 
+local platform = (function()
+    local platform = mp.get_property_native("platform")
+    if platform then
+        if platform == "windows" or platform == "darwin" then
+            return platform
+        end
+    else
+        if os.getenv("windir") ~= nil then return "windows" end
+        local homedir = os.getenv("HOME")
+        if homedir ~= nil and string.sub(homedir, 1, 6) == "/Users" then
+            return "darwin"
+        end
+    end
+    return "linux"
+end)()
+
+local path_separator = (function()
+	local os_separator = platform == "windows" and "\\" or "/"
+
+	-- Get appropriate path separator for the given path.
+	---@param path string
+	---@return string
+	return function(path)
+		return path:sub(1, 2) == "\\\\" and "\\" or os_separator
+	end
+end)()
+
 local event_loop_exhausted = false
 local uosc_available = false
 local menu_shown = false
@@ -118,6 +179,8 @@ local last_state = nil
 local menu_data = nil
 local search_words = nil
 local search_query = nil
+local dir_menu = false
+local dir_menu_prefixes = nil
 
 local data_protocols = {
     edl = true,
@@ -318,6 +381,7 @@ function close_menu()
     menu_data = nil
     search_words = nil
     search_query = nil
+    dir_menu = false
     menu_shown = false
     osd:update()
     osd.hidden = true
@@ -632,6 +696,21 @@ function show_history(entries, next_page, prev_page, update, return_items)
         return
     end
 
+    local function find_path_prefix(path, path_prefixes)
+        for _, plain in ipairs(path_prefixes.plain) do
+            local start, stop = path:find(plain, 1, true)
+            if start then
+                return start, stop
+            end
+        end
+        for _, pattern in ipairs(path_prefixes.pattern) do
+            local start, stop = path:find(pattern)
+            if start then
+                return start, stop
+            end
+        end
+    end
+
     -- all of these error cases can only happen if the user messes with the history file externally
     local function read_line()
         history:seek("set", state.cursor - max_digits_length)
@@ -693,6 +772,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
             return
         end
 
+        if dir_menu and is_remote then
+            return
+        end
+
         if search_words and not options.use_titles then
             for _, word in ipairs(search_words) do
                 if display_path:lower():find(word, 1, true) == nil then
@@ -706,8 +789,18 @@ function show_history(entries, next_page, prev_page, update, return_items)
         if is_remote then
             state.existing_files[cache_key] = true
             state.known_files[cache_key] = true
-        elseif options.hide_same_dir then
+        elseif options.hide_same_dir or dir_menu then
             dirname, basename = mp.utils.split_path(display_path)
+            if dir_menu then
+                local path_sep = path_separator(dirname)
+                local parent, _ = mp.utils.split_path(dirname:sub(1, -path_sep:len() - 1))
+                local start, stop = find_path_prefix(parent, dir_menu_prefixes)
+                if not start then
+                    return
+                end
+                basename = dirname:match(path_sep .. "(.-)" .. path_sep, stop)
+                dirname = dirname:sub(1, stop + basename:len() + 1)
+            end
             if state.known_dirs[dirname] then
                 return
             end
@@ -736,7 +829,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
             title = ""
         end
 
-        if title == "" then
+
+        if dir_menu then
+            title = basename
+        elseif title == "" then
             if is_remote then
                 title = display_path
             else
@@ -907,11 +1003,11 @@ function memo_close()
 end
 
 function memo_clear()
-    if event_loop_exhausted then return end
     last_state = nil
     search_words = nil
     search_query = nil
     menu_shown = false
+    dir_menu = false
 end
 
 function memo_prev()
@@ -958,7 +1054,7 @@ mp.add_key_binding(nil, "memo-last", function()
     if event_loop_exhausted then return end
 
     local items
-    if last_state and last_state.current_page == 1 and options.hide_duplicates and options.hide_deleted and options.entries >= 2 and not search_words then
+    if last_state and last_state.current_page == 1 and options.hide_duplicates and options.hide_deleted and options.entries >= 2 and not search_words and not dir_menu then
         -- menu is open and we for sure have everything we need
         items = last_state.pages[1]
         last_state = nil
@@ -971,6 +1067,7 @@ mp.add_key_binding(nil, "memo-last", function()
         options.hide_deleted = true
         last_state = nil
         search_words = nil
+        dir_menu = false
         items = show_history(2, false, false, false, true)
         options = options_bak
     end
@@ -1002,6 +1099,19 @@ mp.add_key_binding("h", "memo-history", function()
     if event_loop_exhausted then return end
     last_state = nil
     search_words = nil
+    dir_menu = false
+    show_history(options.entries, false)
+end)
+mp.register_script_message("memo-dirs", function(path_prefixes)
+    if event_loop_exhausted then return end
+    last_state = nil
+    search_words = nil
+    dir_menu = true
+    if path_prefixes then
+        dir_menu_prefixes = parse_path_prefixes(path_prefixes)
+    else
+        dir_menu_prefixes = options.path_prefixes
+    end
     show_history(options.entries, false)
 end)
 

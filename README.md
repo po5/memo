@@ -1,5 +1,5 @@
 # memo
-A recent files menu for mpv.
+A recent files and directories menu for mpv.
 
 This script saves your watch history, and displays it in a nice menu.
 
@@ -38,6 +38,15 @@ Brings up a search box, type your keywords and press Enter. This finds entries t
 Writes an entry for the current file. Intended for manual bookmarking with `enabled=no`.
 
 Navigation keybinds for vanilla menu can be configured through `script-opts/memo.conf`.
+
+## Script messages
+Just like the keybindings above, script messages can also be bound to keys in `input.conf`.  
+Example usage: `H script-message-to memo memo-dirs "My-Movies|pattern:TV Shows/.-/|Anime"`
+
+`memo-dirs (path_prefixes)`  
+Similar to `memo-history`, but instead of files it shows the directories of recent files.  
+It optionally takes in custom path prefixes as a parameter with the same syntax as the option of the same name.  
+If no custom path prefixes are provided, the ones from the config are used.
 
 ## uosc menus and buttons
 Adding a menu: append ` #! History` to your `input.conf` keybind, or use this for a menu-only config.
