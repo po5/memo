@@ -249,6 +249,11 @@ function menu_json(menu_items, page)
     return menu
 end
 
+function uosc_update(menu_override)
+    local json = mp.utils.format_json(menu_override or menu_data) or "{}"
+    mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
+end
+
 function update_dimensions()
     width, height = mp.get_osd_size()
     osd.res_x = width
@@ -620,8 +625,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
         menu_data = menu_json(state.pages[state.current_page], state.current_page)
 
         if uosc_available then
-            local json = mp.utils.format_json(menu_data) or "{}"
-            mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
+            uosc_update()
         else
             draw_menu()
         end
@@ -818,8 +822,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             menu_data = menu_json(temp_items, state.current_page)
 
             if uosc_available then
-                local json = mp.utils.format_json(menu_data) or "{}"
-                mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
+                uosc_update()
                 menu_shown = true
             else
                 osd_update = mp.get_time() + 0.1
@@ -849,8 +852,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
     last_state = state
 
     if uosc_available then
-        local json = mp.utils.format_json(menu_data) or "{}"
-        mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
+        uosc_update()
     else
         draw_menu()
     end
@@ -898,8 +900,7 @@ end)
 function memo_close()
     menu_shown = false
     if uosc_available then
-        local json = mp.utils.format_json(menu_json({}, 0)) or "{}"
-        mp.commandv("script-message-to", "uosc", "open-menu", json)
+        uosc_update(menu_json({}, 0))
     else
         close_menu()
     end
