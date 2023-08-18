@@ -233,22 +233,20 @@ function has_protocol(path)
     return path:find("^%a[%w.+-]-://") or path:find("^%a[%w.+-]-:%?")
 end
 
-function menu_json(menu_items, native)
-    local title = search_query or "History"
+function menu_json(menu_items, page)
+    local title = (search_query or "History") .. " (memo)"
+    if options.pagination or page ~= 1 then
+        title = title .. " - Page " .. page
+    end
+
     local menu = {
         type = "memo-history",
-        title = title .. " (memo)",
+        title = title,
         items = menu_items,
-        selected_index = 1,
         on_close = {"script-message-to", script_name, "memo-clear"}
     }
 
-    if native then
-        return menu
-    end
-
-    local json = mp.utils.format_json(menu)
-    return json or "{}"
+    return menu
 end
 
 function update_dimensions()
@@ -330,15 +328,15 @@ function open_menu()
     mp.observe_property("shared-script-properties", "native", update_margins)
 
     bind_keys(options.up_binding, "move_up", function()
-        menu_data.selected_index = math.max(menu_data.selected_index - 1, 1)
+        last_state.selected_index = math.max(last_state.selected_index - 1, 1)
         draw_menu()
     end, { repeatable = true })
     bind_keys(options.down_binding, "move_down", function()
-        menu_data.selected_index = math.min(menu_data.selected_index + 1, #menu_data.items)
+        last_state.selected_index = math.min(last_state.selected_index + 1, #menu_data.items)
         draw_menu()
     end, { repeatable = true })
     bind_keys(options.select_binding, "select", function()
-        local item = menu_data.items[menu_data.selected_index]
+        local item = menu_data.items[last_state.selected_index]
         if not item then return end
         if not item.keep_open then
             close_menu()
@@ -346,7 +344,7 @@ function open_menu()
         mp.commandv(unpack(item.value))
     end)
     bind_keys(options.append_binding, "append", function()
-        local item = menu_data.items[menu_data.selected_index]
+        local item = menu_data.items[last_state.selected_index]
         if not item then return end
         if not item.keep_open then
             close_menu()
@@ -380,13 +378,13 @@ function draw_menu(delay)
     end
 
     local num_options = #menu_data.items > 0 and #menu_data.items + 1 or 1
-    menu_data.selected_index = math.min(menu_data.selected_index, #menu_data.items)
+    last_state.selected_index = math.min(last_state.selected_index, #menu_data.items)
 
     local function get_scrolled_lines()
         local output_height = height - margin_top * height - margin_bottom * height
         local screen_lines = math.max(math.floor(output_height / font_size), 1)
         local max_scroll = math.max(num_options - screen_lines, 0)
-        return math.min(math.max(menu_data.selected_index - math.ceil(screen_lines / 2), 0), max_scroll) - 1
+        return math.min(math.max(last_state.selected_index - math.ceil(screen_lines / 2), 0), max_scroll) - 1
     end
 
     local ass = assdraw.ass_new()
@@ -414,15 +412,15 @@ function draw_menu(delay)
             local item = menu_data.items[i]
             if item.title then
                 local icon
-                local separator = menu_data.selected_index == i and "{\\alpha&HFF&}●{\\alpha&H00&}  - " or "{\\alpha&HFF&}●{\\alpha&H00&} - "
+                local separator = last_state.selected_index == i and "{\\alpha&HFF&}●{\\alpha&H00&}  - " or "{\\alpha&HFF&}●{\\alpha&H00&} - "
                 if item.icon == "spinner" then
                     separator = "⟳ "
                 elseif item.icon == "navigate_next" then
-                    icon = menu_data.selected_index == i and "▶" or "▷"
+                    icon = last_state.selected_index == i and "▶" or "▷"
                 elseif item.icon == "navigate_before" then
-                    icon = menu_data.selected_index == i and "◀" or "◁"
+                    icon = last_state.selected_index == i and "◀" or "◁"
                 else
-                    icon = menu_data.selected_index == i and "●" or "○"
+                    icon = last_state.selected_index == i and "●" or "○"
                 end
                 ass:new_event()
                 ass:pos(0.3 * font_size, pos_y + menu_index * font_size)
@@ -598,7 +596,8 @@ function show_history(entries, next_page, prev_page, update, return_items)
         cursor = history:seek("end"),
         retry = 0,
         pages = {},
-        current_page = 1
+        current_page = 1,
+        selected_index = 1
     }
 
     if update then
@@ -615,14 +614,15 @@ function show_history(entries, next_page, prev_page, update, return_items)
         end
     end
 
+    last_state = state
+
     if state.pages[state.current_page] then
+        menu_data = menu_json(state.pages[state.current_page], state.current_page)
+
         if uosc_available then
-            mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(state.pages[state.current_page]))
-        elseif menu_data then
-            menu_data.items = state.pages[state.current_page]
-            draw_menu()
+            local json = mp.utils.format_json(menu_data) or "{}"
+            mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
         else
-            menu_data = menu_json(state.pages[state.current_page], true)
             draw_menu()
         end
         return
@@ -811,18 +811,17 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
             table.insert(temp_items, {title = "Loading...", value = {"ignore"}, italic = "true", muted = "true", icon = "spinner", keep_open = true})
 
-            if next_page and last_state then
+            if next_page and state.current_page ~= 1 then
                 table.insert(temp_items, {value = {"ignore"}, keep_open = true})
             end
 
+            menu_data = menu_json(temp_items, state.current_page)
+
             if uosc_available then
-                mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(temp_items))
+                local json = mp.utils.format_json(menu_data) or "{}"
+                mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
                 menu_shown = true
-            elseif menu_data then
-                menu_data.items = temp_items
-                osd_update = mp.get_time() + 0.1
             else
-                menu_data = menu_json(temp_items, true)
                 osd_update = mp.get_time() + 0.1
             end
         end
@@ -845,16 +844,14 @@ function show_history(entries, next_page, prev_page, update, return_items)
         end
     end
 
+    menu_data = menu_json(menu_items, state.current_page)
     state.pages[state.current_page] = menu_items
     last_state = state
 
     if uosc_available then
-        mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", menu_json(menu_items))
-    elseif menu_data then
-        menu_data.items = menu_items
-        draw_menu()
+        local json = mp.utils.format_json(menu_data) or "{}"
+        mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
     else
-        menu_data = menu_json(menu_items, true)
         draw_menu()
     end
 
@@ -901,7 +898,8 @@ end)
 function memo_close()
     menu_shown = false
     if uosc_available then
-        mp.commandv("script-message-to", "uosc", "open-menu", menu_json({}))
+        local json = mp.utils.format_json(menu_json({}, 0)) or "{}"
+        mp.commandv("script-message-to", "uosc", "open-menu", json)
     else
         close_menu()
     end
