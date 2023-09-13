@@ -818,8 +818,19 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 if stat then
                     state.existing_files[cache_key] = true
                 else
-                    state.known_files[cache_key] = true
-                    return
+                    if dir_menu then
+                        local dir = mp.utils.split_path(effective_path)
+                        stat = mp.utils.file_info(dir)
+                        if stat then
+                            full_path = dir
+                        else
+                            state.known_files[cache_key] = true
+                            return
+                        end
+                    else
+                        state.known_files[cache_key] = true
+                        return
+                    end
                 end
             end
         end
