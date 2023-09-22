@@ -294,7 +294,8 @@ function menu_json(menu_items, page)
         type = "memo-history",
         title = title,
         items = menu_items,
-        on_close = {"script-message-to", script_name, "memo-clear"}
+        on_search = { "script-message-to", script_name, "memo-search-uosc:" },
+        on_close = { "script-message-to", script_name, "memo-clear" }
     }
 
     return menu
@@ -1030,8 +1031,19 @@ function memo_search(...)
     show_history(options.entries, false)
 end
 
+function memo_search_uosc(query)
+    search_query = query
+    search_words = {}
+    for m in query:lower():gmatch('%S+') do
+        search_words[#search_words + 1] = m
+    end
+    event_loop_exhausted = false
+    show_history(options.entries, false, false, menu_shown and last_state)
+end
+
 mp.register_script_message("memo-clear", memo_clear)
 mp.register_script_message("memo-search:", memo_search)
+mp.register_script_message("memo-search-uosc:", memo_search_uosc)
 
 mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
