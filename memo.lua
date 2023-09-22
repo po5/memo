@@ -313,23 +313,37 @@ function update_dimensions()
     draw_menu()
 end
 
-function update_margins()
-    local shared_props = mp.get_property_native("shared-script-properties")
-    local val = shared_props["osc-margins"]
-    if val then
-        -- formatted as "%f,%f,%f,%f" with left, right, top, bottom, each
-        -- value being the border size as ratio of the window size (0.0-1.0)
-        local vals = {}
-        for v in string.gmatch(val, "[^,]+") do
-            vals[#vals + 1] = tonumber(v)
+if mp.utils.shared_script_property_set then
+    function update_margins()
+        local shared_props = mp.get_property_native("shared-script-properties")
+        local val = shared_props["osc-margins"]
+        if val then
+            -- formatted as "%f,%f,%f,%f" with left, right, top, bottom, each
+            -- value being the border size as ratio of the window size (0.0-1.0)
+            local vals = {}
+            for v in string.gmatch(val, "[^,]+") do
+                vals[#vals + 1] = tonumber(v)
+            end
+            margin_top = vals[3] -- top
+            margin_bottom = vals[4] -- bottom
+        else
+            margin_top = 0
+            margin_bottom = 0
         end
-        margin_top = vals[3] -- top
-        margin_bottom = vals[4] -- bottom
-    else
-        margin_top = 0
-        margin_bottom = 0
+        draw_menu()
     end
-    draw_menu()
+else
+    function update_margins()
+        local val = mp.get_property_native('user-data/osc/margins')
+        if val then
+            margin_top = val.t
+            margin_bottom = val.b
+        else
+            margin_top = 0
+            margin_bottom = 0
+        end
+        draw_menu()
+    end
 end
 
 function bind_keys(keys, name, func, opts)
@@ -383,7 +397,8 @@ function open_menu()
     update_dimensions()
     mp.observe_property("osd-dimensions", "native", update_dimensions)
     mp.observe_property("video-out-params", "native", update_dimensions)
-    mp.observe_property("shared-script-properties", "native", update_margins)
+    local margin_prop = mp.utils.shared_script_property_set and "shared-script-properties" or "user-data/osc/margins"
+    mp.observe_property(margin_prop, "native", update_margins)
 
     bind_keys(options.up_binding, "move_up", function()
         last_state.selected_index = math.max(last_state.selected_index - 1, 1)
