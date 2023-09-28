@@ -991,7 +991,7 @@ end)
 function memo_close()
     menu_shown = false
     if uosc_available then
-        uosc_update(menu_json({}, 0))
+        mp.commandv("script-message-to", "uosc", "close-menu", "memo-history")
     else
         close_menu()
     end
