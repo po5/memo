@@ -805,7 +805,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 elseif dir_menu then
                     local dir = mp.utils.split_path(effective_path)
                     stat = mp.utils.file_info(dir)
-                    if stat then
+                    if stat and stat.size ~= 0 then
                         full_path = dir
                     else
                         state.known_files[cache_key] = true
