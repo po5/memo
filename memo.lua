@@ -782,6 +782,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
                     return
                 end
                 basename = unix_dirname:match("/(.-)/", stop)
+                if basename == nil then return end
                 start, stop = dirname:find(basename, stop, true)
                 dirname = dirname:sub(1, stop + 1)
             end
