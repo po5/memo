@@ -297,7 +297,7 @@ function has_protocol(path)
 end
 
 function menu_json(menu_items, page)
-    local title = (search_query or "History") .. " (memo)"
+    local title = (search_query or (dir_menu and "Directories" or "History")) .. " (memo)"
     if options.pagination or page ~= 1 then
         title = title .. " - Page " .. page
     end
@@ -792,14 +792,16 @@ function show_history(entries, next_page, prev_page, update, return_items)
         elseif options.hide_same_dir or dir_menu then
             dirname, basename = mp.utils.split_path(display_path)
             if dir_menu then
-                local path_sep = path_separator(dirname)
-                local parent, _ = mp.utils.split_path(dirname:sub(1, -path_sep:len() - 1))
+                if dirname == "." then return end
+                local unix_dirname = dirname:gsub("\\", "/")
+                local parent, _ = mp.utils.split_path(unix_dirname:sub(1, -2))
                 local start, stop = find_path_prefix(parent, dir_menu_prefixes)
                 if not start then
                     return
                 end
-                basename = dirname:match(path_sep .. "(.-)" .. path_sep, stop)
-                dirname = dirname:sub(1, stop + basename:len() + 1)
+                basename = unix_dirname:match("/(.-)/", stop)
+                start, stop = dirname:find(basename, stop, true)
+                dirname = dirname:sub(1, stop + 1)
             end
             if state.known_dirs[dirname] then
                 return
