@@ -59,7 +59,7 @@ local options = {
 
 function parse_path_prefixes(path_prefixes)
     local patterns = {}
-    for prefix in path_prefixes:gmatch('([^|]+)') do
+    for prefix in path_prefixes:gmatch("([^|]+)") do
         if prefix:find("pattern:", 1, true) == 1 then
             patterns[#patterns + 1] = { pattern = prefix:sub(9) }
         else
@@ -158,17 +158,6 @@ local platform = (function()
         end
     end
     return "linux"
-end)()
-
-local path_separator = (function()
-	local os_separator = platform == "windows" and "\\" or "/"
-
-	-- Get appropriate path separator for the given path.
-	---@param path string
-	---@return string
-	return function(path)
-		return path:sub(1, 2) == "\\\\" and "\\" or os_separator
-	end
 end)()
 
 local event_loop_exhausted = false
@@ -812,20 +801,18 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 local stat = mp.utils.file_info(effective_path)
                 if stat then
                     state.existing_files[cache_key] = true
-                else
-                    if dir_menu then
-                        local dir = mp.utils.split_path(effective_path)
-                        stat = mp.utils.file_info(dir)
-                        if stat then
-                            full_path = dir
-                        else
-                            state.known_files[cache_key] = true
-                            return
-                        end
+                elseif dir_menu then
+                    local dir = mp.utils.split_path(effective_path)
+                    stat = mp.utils.file_info(dir)
+                    if stat then
+                        full_path = dir
                     else
                         state.known_files[cache_key] = true
                         return
                     end
+                else
+                    state.known_files[cache_key] = true
+                    return
                 end
             end
         end
