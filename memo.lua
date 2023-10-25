@@ -58,16 +58,15 @@ local options = {
 }
 
 function parse_path_prefixes(path_prefixes)
-    local plain = {}
-    local pattern = {}
+    local patterns = {}
     for prefix in path_prefixes:gmatch('([^|]+)') do
         if prefix:find("pattern:", 1, true) == 1 then
-            pattern[#pattern + 1] = prefix:sub(9)
+            patterns[#patterns + 1] = { pattern = prefix:sub(9) }
         else
-            plain[#plain + 1] = prefix
+            patterns[#patterns + 1] = { pattern = prefix, plain = true}
         end
     end
-    return {plain = plain, pattern = pattern}
+    return patterns
 end
 
 local script_name = mp.get_script_name()
@@ -697,14 +696,8 @@ function show_history(entries, next_page, prev_page, update, return_items)
     end
 
     local function find_path_prefix(path, path_prefixes)
-        for _, plain in ipairs(path_prefixes.plain) do
-            local start, stop = path:find(plain, 1, true)
-            if start then
-                return start, stop
-            end
-        end
-        for _, pattern in ipairs(path_prefixes.pattern) do
-            local start, stop = path:find(pattern)
+        for _, prefix in ipairs(path_prefixes) do
+            local start, stop = path:find(prefix.pattern, 1, prefix.plain)
             if start then
                 return start, stop
             end
