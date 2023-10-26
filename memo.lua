@@ -897,7 +897,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             end
         end
 
-        if not return_items and attempts > 0 and attempts % options.entries == 0 and #menu_items ~= item_count then
+        if not return_items and (attempts > 0 or not (prev_page or next_page)) and attempts % options.entries == 0 and #menu_items ~= item_count then
             item_count = #menu_items
             local temp_items = {unpack(menu_items)}
             for i = 1, options.entries - item_count do
