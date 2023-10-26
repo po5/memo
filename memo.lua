@@ -1083,7 +1083,7 @@ end
 function memo_search_uosc(query)
     if query ~= "" then
         search_query = query
-        search_words = parse_query_parts(query)
+        search_words = parse_query_parts(query:lower())
     else
         search_query = nil
         search_words = nil
