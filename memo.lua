@@ -301,8 +301,8 @@ function menu_json(menu_items, page)
     return menu
 end
 
-function uosc_update(menu_override)
-    local json = mp.utils.format_json(menu_override or menu_data) or "{}"
+function uosc_update()
+    local json = mp.utils.format_json(menu_data) or "{}"
     mp.commandv("script-message-to", "uosc", menu_shown and "update-menu" or "open-menu", json)
 end
 
