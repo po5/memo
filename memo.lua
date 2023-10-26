@@ -334,7 +334,7 @@ if mp.utils.shared_script_property_set then
     end
 else
     function update_margins()
-        local val = mp.get_property_native('user-data/osc/margins')
+        local val = mp.get_property_native("user-data/osc/margins")
         if val then
             margin_top = val.t
             margin_bottom = val.b
