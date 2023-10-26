@@ -1040,8 +1040,33 @@ function memo_search_uosc(query)
     if query ~= "" then
         search_query = query
         search_words = {}
+        local quote_open = false
+        local quoted_words = ""
         for word in query:lower():gmatch("%S+") do
-            search_words[#search_words + 1] = word
+            if #word > 1 and word:sub(1, 1) == '"' then
+                word = word:sub(2)
+                quote_open = not quote_open
+            end
+            if quote_open then
+                quoted_words = quoted_words .. (quoted_words ~= "" and " " or "") .. word
+            elseif quoted_words ~= "" then
+                search_words[#search_words + 1] = quoted_words .. " "
+                quoted_words = ""
+            end
+            if quote_open then
+                if word:sub(-1) == '"' then
+                    word = word:sub(1, -2)
+                    quote_open = not quote_open
+                end
+            end
+            if not quote_open then
+                if quoted_words ~= "" then
+                    search_words[#search_words + 1] = quoted_words:sub(1, -2)
+                    quoted_words = ""
+                else
+                    search_words[#search_words + 1] = word
+                end
+            end
         end
     else
         search_query = nil
