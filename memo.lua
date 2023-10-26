@@ -61,9 +61,9 @@ function parse_path_prefixes(path_prefixes)
     local patterns = {}
     for prefix in path_prefixes:gmatch("([^|]+)") do
         if prefix:find("pattern:", 1, true) == 1 then
-            patterns[#patterns + 1] = { pattern = prefix:sub(9) }
+            patterns[#patterns + 1] = {pattern = prefix:sub(9)}
         else
-            patterns[#patterns + 1] = { pattern = prefix, plain = true}
+            patterns[#patterns + 1] = {pattern = prefix, plain = true}
         end
     end
     return patterns
@@ -294,8 +294,8 @@ function menu_json(menu_items, page)
         type = "memo-history",
         title = title,
         items = menu_items,
-        on_search = { "script-message-to", script_name, "memo-search-uosc:" },
-        on_close = { "script-message-to", script_name, "memo-clear" }
+        on_search = {"script-message-to", script_name, "memo-search-uosc:"},
+        on_close = {"script-message-to", script_name, "memo-clear"}
     }
 
     return menu
@@ -1034,8 +1034,8 @@ end
 function memo_search_uosc(query)
     search_query = query
     search_words = {}
-    for m in query:lower():gmatch('%S+') do
-        search_words[#search_words + 1] = m
+    for word in query:lower():gmatch("%S+") do
+        search_words[#search_words + 1] = word
     end
     event_loop_exhausted = false
     show_history(options.entries, false, false, menu_shown and last_state)
