@@ -822,12 +822,15 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 if stat then
                     state.existing_files[cache_key] = true
                 elseif dir_menu then
+                    state.known_files[cache_key] = true
                     local dir = mp.utils.split_path(effective_path)
-                    stat = mp.utils.file_info(dir)
-                    if stat and stat.size ~= 0 then
+                    if dir == "." then
+                        return
+                    end
+                    stat = mp.utils.readdir(dir, "files")
+                    if stat and next(stat) ~= nil then
                         full_path = dir
                     else
-                        state.known_files[cache_key] = true
                         return
                     end
                 else
