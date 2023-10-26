@@ -97,7 +97,6 @@ end
 function fakeio:read(format)
     local out = ""
     if self.cursor < self.offset then
-        local memory_side = self.offset - self.cursor
         self.file:seek("set", self.cursor)
         out = self.file:read(format)
         format = format - #out
@@ -143,22 +142,6 @@ if history == nil then
     history = fakeio
 end
 history:setvbuf("full")
-
-local platform = (function()
-    local platform = mp.get_property_native("platform")
-    if platform then
-        if platform == "windows" or platform == "darwin" then
-            return platform
-        end
-    else
-        if os.getenv("windir") ~= nil then return "windows" end
-        local homedir = os.getenv("HOME")
-        if homedir ~= nil and string.sub(homedir, 1, 6) == "/Users" then
-            return "darwin"
-        end
-    end
-    return "linux"
-end)()
 
 local event_loop_exhausted = false
 local uosc_available = false
@@ -447,7 +430,7 @@ function open_menu()
     draw_menu()
 end
 
-function draw_menu(delay)
+function draw_menu()
     if not menu_data then return end
     if not menu_shown then
         open_menu()
