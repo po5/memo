@@ -1019,23 +1019,33 @@ function memo_search(...)
 
     local words = {...}
     if #words > 0 then
-        search_query = table.concat(words, " ")
+        query = table.concat(words, " ")
 
-        -- escape keywords
-        for i, word in ipairs(words) do
-            words[i] = word:lower()
+        if query ~= "" then
+            for i, word in ipairs(words) do
+                words[i] = word:lower()
+            end
+            search_query = query
+            search_words = words
+        else
+            search_query = nil
+            search_words = nil
         end
-        search_words = words
     end
 
     show_history(options.entries, false)
 end
 
 function memo_search_uosc(query)
-    search_query = query
-    search_words = {}
-    for word in query:lower():gmatch("%S+") do
-        search_words[#search_words + 1] = word
+    if query ~= "" then
+        search_query = query
+        search_words = {}
+        for word in query:lower():gmatch("%S+") do
+            search_words[#search_words + 1] = word
+        end
+    else
+        search_query = nil
+        search_words = nil
     end
     event_loop_exhausted = false
     show_history(options.entries, false, false, menu_shown and last_state)
