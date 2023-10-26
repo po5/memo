@@ -33,7 +33,7 @@ Opens the last non-deleted file that isn't the current file, and isn't in the sa
 
 `memo-search`  
 Brings up a search box, type your keywords and press Enter. This finds entries that contain every keyword. Enclose your search in double quotes for exact matches.  
-Users of uosc can start typing right from the standard history menu to start a search.
+Users of uosc can start typing right from the standard history menu to start a search (requires `menu_type_to_search=yes` in `uosc.conf`).
 
 `memo-log`  
 Writes an entry for the current file. Intended for manual bookmarking with `enabled=no`.
