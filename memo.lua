@@ -48,7 +48,7 @@ local options = {
     --   them with "pattern:", otherwise they will be treated as plain text.
     --   Pattern syntax can be found here https://www.lua.org/manual/5.1/manual.html#5.4.1
     -- Example
-    --   path_prefixes="My-Movies|pattern:TV Shows/.-/|Anime" will show directories
+    --   "path_prefixes=My-Movies|pattern:TV Shows/.-/|Anime" will show directories
     --   that are direct subdirectories of directories named "My-Movies" as well as
     --   "Anime", while for TV Shows the shown directories are one level below that.
     --   Opening the file "/data/TV Shows/Comedy/Curb Your Enthusiasm/S4/E06.mkv" will
