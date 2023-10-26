@@ -1051,38 +1051,31 @@ function memo_search(...)
     show_history(options.entries, false)
 end
 
+function parse_query_parts(query)
+    local pos, len, parts = query:find("%S"), query:len(), {}
+    while pos and pos <= len do
+        local first_char, part, pos_end = query:sub(pos, pos)
+        if first_char == '"' or first_char == "'" then
+            pos_end = query:find(first_char, pos + 1, true)
+            if not pos_end or pos_end ~= len and not query:find("^%s", pos_end + 1) then
+                parts[#parts + 1] = query:sub(pos + 1)
+                return parts
+            end
+            part = query:sub(pos + 1, pos_end - 1)
+        else
+            pos_end = query:find("%S%s", pos) or len
+            part = query:sub(pos, pos_end)
+        end
+        parts[#parts + 1] = part
+        pos = query:find("%S", pos_end + 2)
+    end
+    return parts
+end
+
 function memo_search_uosc(query)
     if query ~= "" then
         search_query = query
-        search_words = {}
-        local quote_open = false
-        local quoted_words = ""
-        for word in query:lower():gmatch("%S+") do
-            if #word > 1 and word:sub(1, 1) == '"' then
-                word = word:sub(2)
-                quote_open = not quote_open
-            end
-            if quote_open then
-                quoted_words = quoted_words .. (quoted_words ~= "" and " " or "") .. word
-            elseif quoted_words ~= "" then
-                search_words[#search_words + 1] = quoted_words .. " "
-                quoted_words = ""
-            end
-            if quote_open then
-                if word:sub(-1) == '"' then
-                    word = word:sub(1, -2)
-                    quote_open = not quote_open
-                end
-            end
-            if not quote_open then
-                if quoted_words ~= "" then
-                    search_words[#search_words + 1] = quoted_words:sub(1, -2)
-                    quoted_words = ""
-                else
-                    search_words[#search_words + 1] = word
-                end
-            end
-        end
+        search_words = parse_query_parts(query)
     else
         search_query = nil
         search_words = nil
