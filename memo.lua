@@ -999,7 +999,7 @@ mp.register_script_message("uosc-version", function(version)
         return false
     end
 
-    local min_version = "4.6.0"
+    local min_version = "5.0.0"
     uosc_available = not semver_comp(version, min_version)
 end)
 
@@ -1094,8 +1094,6 @@ end
 mp.register_script_message("memo-clear", memo_clear)
 mp.register_script_message("memo-search:", memo_search)
 mp.register_script_message("memo-search-uosc:", memo_search_uosc)
-
-mp.command_native_async({"script-message-to", "uosc", "get-version", script_name}, function() end)
 
 mp.add_key_binding(nil, "memo-next", memo_next)
 mp.add_key_binding(nil, "memo-prev", memo_prev)
