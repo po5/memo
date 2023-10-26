@@ -165,6 +165,7 @@ local uosc_available = false
 local menu_shown = false
 local last_state = nil
 local menu_data = nil
+local palette = false
 local search_words = nil
 local search_query = nil
 local dir_menu = false
@@ -295,7 +296,8 @@ function menu_json(menu_items, page)
         title = title,
         items = menu_items,
         on_search = {"script-message-to", script_name, "memo-search-uosc:"},
-        on_close = {"script-message-to", script_name, "memo-clear"}
+        on_close = {"script-message-to", script_name, "memo-clear"},
+        palette = palette
     }
 
     return menu
@@ -386,6 +388,7 @@ function close_menu()
     search_query = nil
     dir_menu = false
     menu_shown = false
+    palette = false
     osd:update()
     osd.hidden = true
     osd:update()
@@ -1005,6 +1008,7 @@ end)
 
 function memo_close()
     menu_shown = false
+    palette = false
     if uosc_available then
         mp.commandv("script-message-to", "uosc", "close-menu", "memo-history")
     else
@@ -1017,6 +1021,7 @@ function memo_clear()
     search_words = nil
     search_query = nil
     menu_shown = false
+    palette = false
     dir_menu = false
 end
 
@@ -1144,6 +1149,11 @@ mp.add_key_binding(nil, "memo-last", function()
     mp.osd_message("[memo] no recent files to open")
 end)
 mp.add_key_binding(nil, "memo-search", function()
+    if uosc_available then
+        palette = true
+        show_history(options.entries, false, false, true)
+        return
+    end
     if menu_shown then
         memo_close()
     end

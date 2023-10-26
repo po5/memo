@@ -32,8 +32,9 @@ Jumps to the previous page of history entries, if there is one. Also opens the m
 Opens the last non-deleted file that isn't the current file, and isn't in the same directory if `hide_same_dir=yes`. Also closes the menu if it's open.
 
 `memo-search`  
-Brings up a search box, type your keywords and press Enter. This finds entries that contain every keyword. Enclose your search in double quotes for exact matches.  
-Users of uosc can start typing right from the standard history menu to start a search (requires `menu_type_to_search=yes` in `uosc.conf`).
+Brings up a search box, type your keywords. If using the vanilla menu, press Enter to submit.  
+This finds entries that contain every keyword. Enclose your search in double quotes for exact matches.  
+Users of uosc can also start typing right from the standard history menu to start a search (requires `menu_type_to_search=yes` in `uosc.conf`).
 
 `memo-log`  
 Writes an entry for the current file. Intended for manual bookmarking with `enabled=no`.
