@@ -669,6 +669,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             state.current_page = state.current_page - 1
         elseif next_page then
             if state.cursor == 0 and not state.pages[state.current_page + 1] then return end
+            if options.entries < 1 then return end
             state.current_page = state.current_page + 1
         end
     end
@@ -933,8 +934,8 @@ function show_history(entries, next_page, prev_page, update, return_items)
         return menu_items
     end
 
-    if options.pagination and #menu_items > 0 then
-        if state.cursor - max_digits_length > 0 then
+    if options.pagination then
+        if #menu_items > 0 and state.cursor - max_digits_length > 0 then
             table.insert(menu_items, {title = "Older entries", value = {"script-binding", "memo-next"}, italic = "true", muted = "true", icon = "navigate_next", keep_open = true})
         end
         if state.current_page ~= 1 then
