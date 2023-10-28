@@ -386,29 +386,13 @@ function open_menu()
     local margin_prop = mp.utils.shared_script_property_set and "shared-script-properties" or "user-data/osc/margins"
     mp.observe_property(margin_prop, "native", update_margins)
 
-    bind_keys(options.up_binding, "move_up", function()
-        last_state.selected_index = math.max(last_state.selected_index - 1, 1)
-        draw_menu()
-    end, { repeatable = true })
-    bind_keys(options.down_binding, "move_down", function()
-        last_state.selected_index = math.min(last_state.selected_index + 1, #menu_data.items)
-        draw_menu()
-    end, { repeatable = true })
-    bind_keys(options.select_binding, "select", function()
+    local function select_item(append)
         local item = menu_data.items[last_state.selected_index]
         if not item then return end
         if not item.keep_open then
             close_menu()
         end
-        mp.commandv(unpack(item.value))
-    end)
-    bind_keys(options.append_binding, "append", function()
-        local item = menu_data.items[last_state.selected_index]
-        if not item then return end
-        if not item.keep_open then
-            close_menu()
-        end
-        if item.value[1] == "loadfile" then
+        if append and item.value[1] == "loadfile" then
             -- bail if file is already in playlist
             local directory = mp.get_property("working-directory", "")
             local playlist = mp.get_property_native("playlist", {})
@@ -424,6 +408,19 @@ function open_menu()
             item.value[3] = "append-play"
         end
         mp.commandv(unpack(item.value))
+    end
+
+    bind_keys(options.up_binding, "move_up", function()
+        last_state.selected_index = math.max(last_state.selected_index - 1, 1)
+        draw_menu()
+    end, { repeatable = true })
+    bind_keys(options.down_binding, "move_down", function()
+        last_state.selected_index = math.min(last_state.selected_index + 1, #menu_data.items)
+        draw_menu()
+    end, { repeatable = true })
+    bind_keys(options.select_binding, "select", select_item)
+    bind_keys(options.append_binding, "append", function()
+        select_item(true)
     end)
     bind_keys(options.close_binding, "close", close_menu)
     osd.hidden = false
