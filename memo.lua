@@ -280,7 +280,8 @@ function menu_json(menu_items, page)
         items = menu_items,
         on_search = {"script-message-to", script_name, "memo-search-uosc:"},
         on_close = {"script-message-to", script_name, "memo-clear"},
-        palette = palette
+        palette = palette, -- TODO: remove on next uosc release
+        search_style = palette and "palette" or nil
     }
 
     return menu
