@@ -145,6 +145,7 @@ history:setvbuf("full")
 
 local event_loop_exhausted = false
 local uosc_available = false
+local dyn_menu_available = ""
 local menu_shown = false
 local last_state = nil
 local menu_data = nil
@@ -629,6 +630,10 @@ function write_history(display)
     history:seek("end")
     history:write(entry .. "," .. entry_length, "\n")
     history:flush()
+
+    if dyn_menu_available ~= "" then
+        dyn_menu_update()
+    end
 end
 
 function show_history(entries, next_page, prev_page, update, return_items)
@@ -1074,6 +1079,41 @@ function memo_search_uosc(query)
     show_history(options.entries, false, false, menu_shown and last_state)
 end
 
+-- update menu in mpv-menu-plugin
+function dyn_menu_update()
+    local items = show_history(options.entries, false, false, false, true)
+
+    local dyn_menu = {
+        type = "submenu",
+        submenu = "",
+    }
+
+    local submenu = not options.enabled and {
+        { title = "Add to memo", cmd = "script-message-to memo memo-log", },
+        { type = "separator", },
+    } or {}
+
+    if #items > 0 then
+        for _, item in ipairs(items) do
+            local cmd = string.format("%s '%s' %s", item.value[1], item.value[2], item.value[3])
+            if item.value[4] then
+                cmd = cmd .. " " .. tostring(item.value[4])
+            end
+            submenu[#submenu + 1] = {
+                title = item.title .. "\t" .. item.hint,
+                cmd = cmd,
+            }
+        end
+        if last_state.cursor > 0 then
+            submenu[#submenu + 1] = { title = "...", cmd = "script-message-to memo memo-next", }
+        end
+    end
+
+    dyn_menu.submenu = submenu
+
+    mp.commandv("script-message-to", dyn_menu_available, "update", "memo", mp.utils.format_json(dyn_menu))
+end
+
 mp.register_script_message("memo-clear", memo_clear)
 mp.register_script_message("memo-search:", memo_search)
 mp.register_script_message("memo-search-uosc:", memo_search_uosc)
@@ -1159,3 +1199,7 @@ end)
 
 mp.register_event("file-loaded", file_load)
 mp.register_idle(idle)
+mp.register_script_message("menu-ready", function(name)
+    dyn_menu_available = name
+    dyn_menu_update()
+end)
