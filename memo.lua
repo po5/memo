@@ -152,7 +152,7 @@ local palette = false
 local search_words = nil
 local search_query = nil
 local dir_menu = false
-local dir_menu_prefixes = nil
+local path_prefixes = nil
 
 local data_protocols = {
     edl = true,
@@ -759,6 +759,12 @@ function show_history(entries, next_page, prev_page, update, return_items)
             return
         end
 
+        if not dir_menu and path_prefixes then
+            if not find_path_prefix(display_path, path_prefixes) then
+                return
+            end
+        end
+
         if search_words and not options.use_titles then
             for _, word in ipairs(search_words) do
                 if display_path:lower():find(word, 1, true) == nil then
@@ -778,7 +784,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 if dirname == "." then return end
                 local unix_dirname = dirname:gsub("\\", "/")
                 local parent, _ = mp.utils.split_path(unix_dirname:sub(1, -2))
-                local start, stop = find_path_prefix(parent, dir_menu_prefixes)
+                local start, stop = find_path_prefix(parent, path_prefixes)
                 if not start then
                     return
                 end
@@ -1137,22 +1143,27 @@ mp.add_key_binding(nil, "memo-search", function()
     end
     mp.commandv("script-message-to", "console", "type", "script-message memo-search: ")
 end)
-mp.add_key_binding("h", "memo-history", function()
+mp.register_script_message("memo-history", function(custom_path_prefixes)
     if event_loop_exhausted then return end
     last_state = nil
     search_words = nil
     dir_menu = false
+    if custom_path_prefixes then
+        path_prefixes = parse_path_prefixes(custom_path_prefixes)
+    else
+        path_prefixes = nil
+    end
     show_history(options.entries, false)
 end)
-mp.register_script_message("memo-dirs", function(path_prefixes)
+mp.register_script_message("memo-dirs", function(custom_path_prefixes)
     if event_loop_exhausted then return end
     last_state = nil
     search_words = nil
     dir_menu = true
-    if path_prefixes then
-        dir_menu_prefixes = parse_path_prefixes(path_prefixes)
+    if custom_path_prefixes then
+        path_prefixes = parse_path_prefixes(custom_path_prefixes)
     else
-        dir_menu_prefixes = options.path_prefixes
+        path_prefixes = options.path_prefixes
     end
     show_history(options.entries, false)
 end)
