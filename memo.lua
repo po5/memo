@@ -1100,8 +1100,9 @@ function dyn_menu_update()
                 cmd = cmd .. " " .. tostring(item.value[4])
             end
             submenu[#submenu + 1] = {
-                title = item.title .. "\t" .. item.hint,
+                title = item.title,
                 cmd = cmd,
+                shortcut = item.hint,
             }
         end
         if last_state.cursor > 0 then
