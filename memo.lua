@@ -4,7 +4,7 @@
 
 local options = {
     -- File path gets expanded, leave empty for in-memory history
-    history_path = "~~/memo-history.log",
+    history_path = "~~state/memo-history.log",
 
     -- How many entries to display in menu
     entries = 10,
