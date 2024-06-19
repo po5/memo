@@ -1095,7 +1095,7 @@ function dyn_menu_update()
 
     if #items > 0 then
         for _, item in ipairs(items) do
-            local cmd = string.format("%s '%s' %s", item.value[1], item.value[2], item.value[3])
+            local cmd = string.format("%s \"%s\" %s", item.value[1], item.value[2]:gsub("\\", "\\\\"), item.value[3])
             if item.value[4] then
                 cmd = cmd .. " " .. tostring(item.value[4])
             end
