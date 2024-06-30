@@ -179,8 +179,6 @@ local device_protocols = {
     bd = true,
     br = true,
     bluray = true,
-    bdnav = true,
-    bluraynav = true,
     cdda = true,
     dvb = true,
     dvd = true,
@@ -625,7 +623,7 @@ function write_history(display)
         return
     end
 
-    if effective_protocol == "bd" or effective_protocol == "br" or effective_protocol == "bluray" or effective_protocol == "bdnav" or effective_protocol == "bluraynav" then
+    if effective_protocol == "bd" or effective_protocol == "br" or effective_protocol == "bluray" then
         full_path = full_path .. " --opt=bluray-device=" .. mp.get_property("bluray-device", "")
     elseif effective_protocol == "cdda" then
         full_path = full_path .. " --opt=cdrom-device=" .. mp.get_property("cdrom-device", "")
