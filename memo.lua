@@ -85,7 +85,7 @@ local assdraw = require "mp.assdraw"
 local osd = mp.create_osd_overlay("ass-events")
 osd.z = 2000
 local osd_update = nil
-local width, height
+local width, height = 0, 0
 local margin_top, margin_bottom = 0, 0
 local font_size = mp.get_property_number("osd-font-size") or 55
 
