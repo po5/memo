@@ -153,6 +153,7 @@ local search_words = nil
 local search_query = nil
 local dir_menu = false
 local dir_menu_prefixes = nil
+local new_loadfile = nil
 
 local data_protocols = {
     edl = true,
@@ -266,6 +267,31 @@ end
 
 function has_protocol(path)
     return path:find("^%a[%w.+-]-://") or path:find("^%a[%w.+-]-:%?")
+end
+
+function loadfile_compat(path)
+    if new_loadfile ~= nil then
+        if new_loadfile then
+            return {-1, path}
+        end
+        return {path}
+    end
+
+    new_loadfile = false
+
+    local commands = mp.get_property_native("command-list", {})
+    for _, command in ipairs(commands) do
+        if command.name == "loadfile" then
+            for _, arg in ipairs(command.args) do
+                if arg.name == "index" then
+                    new_loadfile = true
+                    return {-1, path}
+                end
+            end
+            return {path}
+        end
+    end
+    return {path}
 end
 
 function menu_json(menu_items, page)
@@ -879,7 +905,9 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         if file_options then
             command[2] = display_path
-            table.insert(command, file_options)
+            for _, arg in ipairs(loadfile_compat(file_options)) do
+                table.insert(command, arg)
+            end
         end
 
         table.insert(menu_items, {title = title, hint = timestamp, value = command})
