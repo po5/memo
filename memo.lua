@@ -630,6 +630,10 @@ function write_history(display)
     history:seek("end")
     history:write(entry .. "," .. entry_length, "\n")
     history:flush()
+
+    if dyn_menu then
+        dyn_menu_update()
+    end
 end
 
 function show_history(entries, next_page, prev_page, update, return_items)
@@ -958,10 +962,7 @@ end
 function file_load()
     if options.enabled then
         write_history()
-    end
-
-
-    if dyn_menu then
+    elseif dyn_menu then
         dyn_menu_update()
     end
 
@@ -995,6 +996,11 @@ mp.register_script_message("uosc-version", function(version)
 
     local min_version = "5.0.0"
     uosc_available = not semver_comp(version, min_version)
+end)
+
+mp.register_script_message("menu-ready", function(client_name)
+    dyn_menu = client_name
+    dyn_menu_update()
 end)
 
 function memo_close()
@@ -1083,7 +1089,9 @@ end
 -- update menu in mpv-menu-plugin
 function dyn_menu_update()
     search_words = nil
+	event_loop_exhausted = false
     local items = show_history(options.entries, false, false, false, true)
+	event_loop_exhausted = false
 
     local menu = {
         type = "submenu",
@@ -1091,22 +1099,34 @@ function dyn_menu_update()
     }
 
     if not options.enabled then
-        menu.submenu = {{title = "Add to memo", cmd = "script-binding memo-log"}, {type = "separator"}}
+        menu.submenu = {{title = "Add current file to memo", cmd = "script-binding memo-log"}, {type = "separator"}}
     end
 
-    if #items > 0 then
+    if items and #items > 0 then
+        local full_path = get_full_path()
         for _, item in ipairs(items) do
-            local cmd = string.format("%s \"%s\" %s %s %s", item.value[1], item.value[2]:gsub("\\", "\\\\"):gsub("\"", "\\\""), item.value[3], (item.value[4] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\""), (item.value[5] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\""))
+            local cmd = string.format("%s \"%s\" %s %s %s",
+				item.value[1],
+				item.value[2]:gsub("\\", "\\\\"):gsub("\"", "\\\""),
+				item.value[3],
+				(item.value[4] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\""),
+				(item.value[5] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\"")
+			)
             menu.submenu[#menu.submenu + 1] = {
                 title = item.title,
                 cmd = cmd,
                 shortcut = item.hint,
-				state = {get_full_path() == item.value[2] and "checked" or ""}
+				state = full_path == item.value[2] and {"checked"} or {}
             }
         end
         if last_state.cursor > 0 then
             menu.submenu[#menu.submenu + 1] = {title = "...", cmd = "script-binding memo-next"}
         end
+	else
+		menu.submenu[#menu.submenu + 1] = {
+			title = "No entries",
+			state = {"disabled"}
+		}
     end
 	
     mp.commandv("script-message-to", dyn_menu, "update", "memo", mp.utils.format_json(menu))
@@ -1197,7 +1217,3 @@ end)
 
 mp.register_event("file-loaded", file_load)
 mp.register_idle(idle)
-mp.register_script_message("menu-ready", function(client_name)
-    dyn_menu = client_name
-    dyn_menu_update()
-end)
