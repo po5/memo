@@ -271,7 +271,7 @@ end
 function loadfile_compat(path)
     if new_loadfile ~= nil then
         if new_loadfile then
-            return {-1, path}
+            return {"-1", path}
         end
         return {path}
     end
@@ -284,7 +284,7 @@ function loadfile_compat(path)
             for _, arg in ipairs(command.args) do
                 if arg.name == "index" then
                     new_loadfile = true
-                    return {-1, path}
+                    return {"-1", path}
                 end
             end
             return {path}
