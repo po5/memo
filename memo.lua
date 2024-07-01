@@ -257,6 +257,64 @@ function ass_clean(str)
     return str
 end
 
+-- https://stackoverflow.com/a/73283799
+function unaccent(str)
+    local unimask = "[%z\1-\127\194-\244][\128-\191]*"
+    return str:gsub(unimask, function(unichar) 
+        local charmap = --"Basic Latin".."Latin-1 Supplement".."Latin Extended-A".."Latin Extended-B"..
+        "AÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦȺAEÆǢǼ"..
+        "BßƁƂƄɃ"..
+        "CÇĆĈĊČƆƇȻ"..
+        "DÐĎĐƉƊDZƻǄǱDzǅǲ"..
+        "EÈÉÊËĒĔĖĘĚƎƏƐȄȆȨɆ"..
+        "FƑ"..
+        "GĜĞĠĢƓǤǦǴ"..
+        "HĤĦȞHuǶ"..
+        "IÌÍÎÏĨĪĬĮİƖƗǏȈȊIJĲ"..
+        "JĴɈ"..
+        "KĶƘǨ"..
+        "LĹĻĽĿŁȽLJǇLjǈ"..
+        "NÑŃŅŇŊƝǸȠNJǊNjǋ"..
+        "OÒÓÔÕÖØŌŎŐƟƠǑǪǬǾȌȎȪȬȮȰOEŒOIƢOUȢ"..
+        "PÞƤǷ"..
+        "QɊ"..
+        "RŔŖŘȐȒɌ"..
+        "SŚŜŞŠƧƩƪƼȘ"..
+        "TŢŤŦƬƮȚȾ"..
+        "UÙÚÛÜŨŪŬŮŰŲƯƱƲȔȖɄǓǕǗǙǛ"..
+        "VɅ"..
+        "WŴƜ"..
+        "YÝŶŸƳȜȲɎ"..
+        "ZŹŻŽƵƷƸǮȤ"..
+        "aàáâãäåāăąǎǟǡǻȁȃȧaeæǣǽ"..
+        "bƀƃƅ"..
+        "cçćĉċčƈȼ"..
+        "dðƌƋƍȡďđdbȸdzǆǳ"..    
+        "eèéêëēĕėęěǝȅȇȩɇ"..
+        "fƒ"..
+        "gĝğġģƔǥǧǵ"..
+        "hĥħȟhvƕ"..
+        "iìíîïĩīĭįıǐȉȋijĳ"..
+        "jĵǰȷɉ"..
+        "kķĸƙǩ"..
+        "lĺļľŀłƚƛȴljǉ"..
+        "nñńņňŉŋƞǹȵnjǌ"..
+        "oòóôõöøōŏőơǒǫǭǿȍȏȫȭȯȱoeœoiƣouȣ"..
+        "pþƥƿ"..
+        "qɋqpȹ"..
+        "rŕŗřƦȑȓɍ"..
+        "sśŝşšſƨƽșȿ"..
+        "tţťŧƫƭțȶtsƾ"..
+        "uùúûüũūŭůűųưǔǖǘǚǜȕȗ"..
+        "wŵ"..
+        "yýÿŷƴȝȳɏ"..
+        "zźżžƶƹƺǯȥɀ"..
+        ""
+        unichar = unichar:gsub('[%(%)%.%%%+%-%*%?%[%^%$]','%%%0') --escape magic characters
+        return unichar:match("%a") or charmap:match("(%a+)[^%a]-"..unichar)
+    end)
+end
+
 function shallow_copy(t)
     local t2 = {}
     for k,v in pairs(t) do
@@ -830,7 +888,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         if search_words and not options.use_titles then
             for _, word in ipairs(search_words) do
-                if display_path:lower():find(word, 1, true) == nil then
+                if unaccent(display_path):lower():find(word, 1, true) == nil then
                     return
                 end
             end
@@ -913,7 +971,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         if search_words and options.use_titles then
             for _, word in ipairs(search_words) do
-                if title:lower():find(word, 1, true) == nil then
+                if unaccent(title):lower():find(word, 1, true) == nil then
                     return
                 end
             end
@@ -1105,7 +1163,7 @@ function memo_search(...)
 
         if query ~= "" then
             for i, word in ipairs(words) do
-                words[i] = word:lower()
+                words[i] = unaccent(word):lower()
             end
             search_query = query
             search_words = words
@@ -1142,7 +1200,7 @@ end
 function memo_search_uosc(query)
     if query ~= "" then
         search_query = query
-        search_words = parse_query_parts(query:lower())
+        search_words = parse_query_parts(unaccent(query):lower())
     else
         search_query = nil
         search_words = nil
