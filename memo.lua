@@ -257,11 +257,12 @@ function ass_clean(str)
     return str
 end
 
--- https://stackoverflow.com/a/73283799
+-- Extended from https://stackoverflow.com/a/73283799
 function unaccent(str)
     local unimask = "[%z\1-\127\194-\244][\128-\191]*"
     return str:gsub(unimask, function(unichar) 
-        local charmap = --"Basic Latin".."Latin-1 Supplement".."Latin Extended-A".."Latin Extended-B"..
+        -- "Basic Latin".."Latin-1 Supplement".."Latin Extended-A".."Latin Extended-B"
+        local charmap =
         "AÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦȺAEÆǢǼ"..
         "BßƁƂƄɃ"..
         "CÇĆĈĊČƆƇȻ"..
@@ -308,10 +309,13 @@ function unaccent(str)
         "uùúûüũūŭůűųưǔǖǘǚǜȕȗ"..
         "wŵ"..
         "yýÿŷƴȝȳɏ"..
-        "zźżžƶƹƺǯȥɀ"..
-        ""
-        unichar = unichar:gsub('[%(%)%.%%%+%-%*%?%[%^%$]','%%%0') --escape magic characters
-        return unichar:match("%a") or charmap:match("(%a+)[^%a]-"..unichar)
+        "zźżžƶƹƺǯȥɀ"
+
+        -- "Combining Diacritical Marks"
+        local diacritics = "̀".."́".."̂".."̃".."̄".."̅".."̆".."̇".."̈".."̉".."̊".."̋".."̌".."̍".."̎".."̏".."̐".."̑".."̒".."̓".."̔".."̕".."̖".."̗".."̘".."̙".."̚".."̛".."̜".."̝".."̞".."̟".."̠".."̡".."̢".."̣".."̤".."̥".."̦".."̧".."̨".."̩".."̪".."̫".."̬".."̭".."̮".."̯".."̰".."̱".."̲".."̳".."̴".."̵".."̶".."̷".."̸".."̹".."̺".."̻".."̼".."̽".."̾".."̿".."̀".."́".."͂".."̓".."̈́".."ͅ".."͆".."͇".."͈".."͉".."͊".."͋".."͌".."͍".."͎".."͏".."͐".."͑".."͒".."͓".."͔".."͕".."͖".."͗".."͘".."͙".."͚".."͛".."͜".."͝".."͞".."͟".."͠".."͡".."͢".."ͣ".."ͤ".."ͥ".."ͦ".."ͧ".."ͨ".."ͩ".."ͪ".."ͫ".."ͬ".."ͭ".."ͮ".."ͯ"
+
+        local escaped = unichar:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")
+        return unichar:match("%a") or charmap:match("(%a+)[^%a]-"..escaped) or (diacritics:match(escaped) and "" or unichar)
     end)
 end
 
