@@ -270,6 +270,12 @@ function has_protocol(path)
 end
 
 function normalize(path)
+    -- don't normalize magnet-style paths
+    local protocol_start, protocol_end, protocol = path:find("^(%a[%w.+-]-):%?")
+    if protocol_end then
+        return path
+    end
+
     if normalize_path ~= nil then
         if normalize_path then
             path = mp.command_native({"normalize-path", path})
