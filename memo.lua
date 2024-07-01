@@ -250,6 +250,22 @@ function utf8_subwidth_back(t, num_chars)
     return substr
 end
 
+function utf8_to_unicode(str, i)
+    local byte_count = utf8_char_bytes(str, i)
+    local char_byte = str:byte(i)
+    local unicode = char_byte
+    if byte_count ~= 1 then
+        local shift = 2 ^ (8 - byte_count)
+        char_byte = char_byte - math.floor(0xFF / shift) * shift
+        unicode = char_byte * (2 ^ 6) ^ (byte_count - 1)
+    end
+    for j = 2, byte_count do
+        char_byte = str:byte(i + j - 1) - 0x80
+        unicode = unicode + char_byte * (2 ^ 6) ^ (byte_count - j)
+    end
+    return math.floor(unicode + 0.5)
+end
+
 function ass_clean(str)
     str = str:gsub("\\", "\\\239\187\191")
     str = str:gsub("{", "\\{")
@@ -257,65 +273,92 @@ function ass_clean(str)
     return str
 end
 
--- Extended from https://stackoverflow.com/a/73283799
+-- Extended from https://stackoverflow.com/a/73283799 with zero-width handling from uosc
 function unaccent(str)
     local unimask = "[%z\1-\127\194-\244][\128-\191]*"
+
+    -- "Basic Latin".."Latin-1 Supplement".."Latin Extended-A".."Latin Extended-B"
+    local charmap =
+    "AÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦȺAEÆǢǼ"..
+    "BßƁƂƄɃ"..
+    "CÇĆĈĊČƆƇȻ"..
+    "DÐĎĐƉƊDZƻǄǱDzǅǲ"..
+    "EÈÉÊËĒĔĖĘĚƎƏƐȄȆȨɆ"..
+    "FƑ"..
+    "GĜĞĠĢƓǤǦǴ"..
+    "HĤĦȞHuǶ"..
+    "IÌÍÎÏĨĪĬĮİƖƗǏȈȊIJĲ"..
+    "JĴɈ"..
+    "KĶƘǨ"..
+    "LĹĻĽĿŁȽLJǇLjǈ"..
+    "NÑŃŅŇŊƝǸȠNJǊNjǋ"..
+    "OÒÓÔÕÖØŌŎŐƟƠǑǪǬǾȌȎȪȬȮȰOEŒOIƢOUȢ"..
+    "PÞƤǷ"..
+    "QɊ"..
+    "RŔŖŘȐȒɌ"..
+    "SŚŜŞŠƧƩƪƼȘ"..
+    "TŢŤŦƬƮȚȾ"..
+    "UÙÚÛÜŨŪŬŮŰŲƯƱƲȔȖɄǓǕǗǙǛ"..
+    "VɅ"..
+    "WŴƜ"..
+    "YÝŶŸƳȜȲɎ"..
+    "ZŹŻŽƵƷƸǮȤ"..
+    "aàáâãäåāăąǎǟǡǻȁȃȧaeæǣǽ"..
+    "bƀƃƅ"..
+    "cçćĉċčƈȼ"..
+    "dðƌƋƍȡďđdbȸdzǆǳ"..    
+    "eèéêëēĕėęěǝȅȇȩɇ"..
+    "fƒ"..
+    "gĝğġģƔǥǧǵ"..
+    "hĥħȟhvƕ"..
+    "iìíîïĩīĭįıǐȉȋijĳ"..
+    "jĵǰȷɉ"..
+    "kķĸƙǩ"..
+    "lĺļľŀłƚƛȴljǉ"..
+    "nñńņňŉŋƞǹȵnjǌ"..
+    "oòóôõöøōŏőơǒǫǭǿȍȏȫȭȯȱoeœoiƣouȣ"..
+    "pþƥƿ"..
+    "qɋqpȹ"..
+    "rŕŗřƦȑȓɍ"..
+    "sśŝşšſƨƽșȿ"..
+    "tţťŧƫƭțȶtsƾ"..
+    "uùúûüũūŭůűųưǔǖǘǚǜȕȗ"..
+    "wŵ"..
+    "yýÿŷƴȝȳɏ"..
+    "zźżžƶƹƺǯȥɀ"
+
+    local zero_width_blocks = {
+        {0x0000,  0x001F}, -- C0
+        {0x007F,  0x009F}, -- Delete + C1
+        {0x034F,  0x034F}, -- combining grapheme joiner
+        {0x061C,  0x061C}, -- Arabic Letter Strong
+        {0x200B,  0x200F}, -- {zero-width space, zero-width non-joiner, zero-width joiner, left-to-right mark, right-to-left mark}
+        {0x2028,  0x202E}, -- {line separator, paragraph separator, Left-to-Right Embedding, Right-to-Left Embedding, Pop Directional Format, Left-to-Right Override, Right-to-Left Override}
+        {0x2060,  0x2060}, -- word joiner
+        {0x2066,  0x2069}, -- {Left-to-Right Isolate, Right-to-Left Isolate, First Strong Isolate, Pop Directional Isolate}
+        {0xFEFF,  0xFEFF}, -- zero-width non-breaking space
+        -- Some other characters can also be combined https://en.wikipedia.org/wiki/Combining_character
+        {0x0300,  0x036F}, -- Combining Diacritical Marks    0 BMP  Inherited
+        {0x1AB0,  0x1AFF}, -- Combining Diacritical Marks Extended   0 BMP  Inherited
+        {0x1DC0,  0x1DFF}, -- Combining Diacritical Marks Supplement     0 BMP  Inherited
+        {0x20D0,  0x20FF}, -- Combining Diacritical Marks for Symbols    0 BMP  Inherited
+        {0xFE20,  0xFE2F}, -- Combining Half Marks   0 BMP  Cyrillic (2 characters), Inherited (14 characters)
+        -- Egyptian Hieroglyph Format Controls and Shorthand format Controls
+        {0x13430, 0x1345F}, -- Egyptian Hieroglyph Format Controls   1 SMP  Egyptian Hieroglyphs
+        {0x1BCA0, 0x1BCAF}, -- Shorthand Format Controls     1 SMP  Common
+        -- not sure how to deal with those https://en.wikipedia.org/wiki/Spacing_Modifier_Letters
+        {0x02B0,  0x02FF}, -- Spacing Modifier Letters   0 BMP  Bopomofo (2 characters), Latin (14 characters), Common (64 characters)
+    }
+
     return str:gsub(unimask, function(unichar) 
-        -- "Basic Latin".."Latin-1 Supplement".."Latin Extended-A".."Latin Extended-B"
-        local charmap =
-        "AÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦȺAEÆǢǼ"..
-        "BßƁƂƄɃ"..
-        "CÇĆĈĊČƆƇȻ"..
-        "DÐĎĐƉƊDZƻǄǱDzǅǲ"..
-        "EÈÉÊËĒĔĖĘĚƎƏƐȄȆȨɆ"..
-        "FƑ"..
-        "GĜĞĠĢƓǤǦǴ"..
-        "HĤĦȞHuǶ"..
-        "IÌÍÎÏĨĪĬĮİƖƗǏȈȊIJĲ"..
-        "JĴɈ"..
-        "KĶƘǨ"..
-        "LĹĻĽĿŁȽLJǇLjǈ"..
-        "NÑŃŅŇŊƝǸȠNJǊNjǋ"..
-        "OÒÓÔÕÖØŌŎŐƟƠǑǪǬǾȌȎȪȬȮȰOEŒOIƢOUȢ"..
-        "PÞƤǷ"..
-        "QɊ"..
-        "RŔŖŘȐȒɌ"..
-        "SŚŜŞŠƧƩƪƼȘ"..
-        "TŢŤŦƬƮȚȾ"..
-        "UÙÚÛÜŨŪŬŮŰŲƯƱƲȔȖɄǓǕǗǙǛ"..
-        "VɅ"..
-        "WŴƜ"..
-        "YÝŶŸƳȜȲɎ"..
-        "ZŹŻŽƵƷƸǮȤ"..
-        "aàáâãäåāăąǎǟǡǻȁȃȧaeæǣǽ"..
-        "bƀƃƅ"..
-        "cçćĉċčƈȼ"..
-        "dðƌƋƍȡďđdbȸdzǆǳ"..    
-        "eèéêëēĕėęěǝȅȇȩɇ"..
-        "fƒ"..
-        "gĝğġģƔǥǧǵ"..
-        "hĥħȟhvƕ"..
-        "iìíîïĩīĭįıǐȉȋijĳ"..
-        "jĵǰȷɉ"..
-        "kķĸƙǩ"..
-        "lĺļľŀłƚƛȴljǉ"..
-        "nñńņňŉŋƞǹȵnjǌ"..
-        "oòóôõöøōŏőơǒǫǭǿȍȏȫȭȯȱoeœoiƣouȣ"..
-        "pþƥƿ"..
-        "qɋqpȹ"..
-        "rŕŗřƦȑȓɍ"..
-        "sśŝşšſƨƽșȿ"..
-        "tţťŧƫƭțȶtsƾ"..
-        "uùúûüũūŭůűųưǔǖǘǚǜȕȗ"..
-        "wŵ"..
-        "yýÿŷƴȝȳɏ"..
-        "zźżžƶƹƺǯȥɀ"
+        local unicode = utf8_to_unicode(unichar, 1)
+        for _, block in ipairs(zero_width_blocks) do
+            if unicode >= block[1] and unicode <= block[2] then
+                return ""
+            end
+        end
 
-        -- "Combining Diacritical Marks"
-        local diacritics = "̀".."́".."̂".."̃".."̄".."̅".."̆".."̇".."̈".."̉".."̊".."̋".."̌".."̍".."̎".."̏".."̐".."̑".."̒".."̓".."̔".."̕".."̖".."̗".."̘".."̙".."̚".."̛".."̜".."̝".."̞".."̟".."̠".."̡".."̢".."̣".."̤".."̥".."̦".."̧".."̨".."̩".."̪".."̫".."̬".."̭".."̮".."̯".."̰".."̱".."̲".."̳".."̴".."̵".."̶".."̷".."̸".."̹".."̺".."̻".."̼".."̽".."̾".."̿".."̀".."́".."͂".."̓".."̈́".."ͅ".."͆".."͇".."͈".."͉".."͊".."͋".."͌".."͍".."͎".."͏".."͐".."͑".."͒".."͓".."͔".."͕".."͖".."͗".."͘".."͙".."͚".."͛".."͜".."͝".."͞".."͟".."͠".."͡".."͢".."ͣ".."ͤ".."ͥ".."ͦ".."ͧ".."ͨ".."ͩ".."ͪ".."ͫ".."ͬ".."ͭ".."ͮ".."ͯ"
-
-        local escaped = unichar:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")
-        return unichar:match("%a") or charmap:match("(%a+)[^%a]-"..escaped) or (diacritics:match(escaped) and "" or unichar)
+        return unichar:match("%a") or charmap:match("(%a+)[^%a]-"..(unichar:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")))
     end)
 end
 
