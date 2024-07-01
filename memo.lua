@@ -155,6 +155,7 @@ local search_query = nil
 local dir_menu = false
 local dir_menu_prefixes = nil
 local new_loadfile = nil
+local normalize_path = nil
 
 local data_protocols = {
     edl = true,
@@ -266,6 +267,36 @@ end
 
 function has_protocol(path)
     return path:find("^%a[%w.+-]-://") or path:find("^%a[%w.+-]-:%?")
+end
+
+function normalize(path)
+    if normalize_path ~= nil then
+        if normalize_path then
+            path = mp.command_native({"normalize-path", path})
+        else
+            -- TODO: implement the basics of path normalization ourselves for mpv 0.38.0 and under
+        end
+        return path
+    end
+
+    normalize_path = false
+
+    local commands = mp.get_property_native("command-list", {})
+    for _, command in ipairs(commands) do
+        if command.name == "loadfile" then
+            for _, arg in ipairs(command.args) do
+                if arg.name == "index" then
+                    new_loadfile = true
+                    break
+                end
+            end
+        end
+        if command.name == "normalize-path" then
+            normalize_path = true
+            break
+        end
+    end
+    return normalize(path)
 end
 
 function loadfile_compat(path)
@@ -420,12 +451,12 @@ function open_menu()
         end
         if append and item.value[1] == "loadfile" then
             -- bail if file is already in playlist
-            local directory = mp.get_property("working-directory", "")
             local playlist = mp.get_property_native("playlist", {})
             for i = 1, #playlist do
                 local playlist_file = playlist[i].filename
-                if not has_protocol(playlist_file) then
-                    playlist_file = mp.utils.join_path(directory, playlist_file)
+                local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = path_info(playlist_file)
+                if not is_remote then
+                    playlist_file = normalize(save_path)
                 end
                 if item.value[2] == playlist_file then
                     return
@@ -530,17 +561,17 @@ function get_full_path()
     local path = mp.get_property("path")
     if path == nil or path == "-" or path == "/dev/stdin" then return end
 
-    if not has_protocol(path) then
-        local directory = mp.get_property("working-directory", "")
-        path = mp.utils.join_path(directory, path)
+    local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = path_info(path)
+
+    if not is_remote then
+        path = normalize(save_path)
     end
 
-
-    return path
+    return path, display_path, save_path, effective_path, effective_protocol, is_remote, file_options
 end
 
 function path_info(full_path)
-    local function resolve(effective_path, display_path, last_protocol, is_remote)
+    local function resolve(effective_path, save_path, display_path, last_protocol, is_remote)
         local protocol_start, protocol_end, protocol = display_path:find("^(%a[%w.+-]-)://")
 
         if protocol == "ytdl" then
@@ -563,24 +594,27 @@ function path_info(full_path)
                 is_remote = true
                 display_path = display_path:sub(protocol_end + 1)
             end
-            return display_path, effective_path, protocol, is_remote, file_options
+            return display_path, save_path, effective_path, protocol, is_remote, file_options
         end
 
         if not protocol_end then
             if last_protocol == "ytdl" then
                 display_path = "ytdl://" .. display_path
             end
-            return display_path, effective_path, last_protocol, is_remote, nil
+            return display_path, save_path, effective_path, last_protocol, is_remote, nil
         end
 
         display_path = display_path:sub(protocol_end + 1)
 
         if protocol == "archive" then
-            local main_path, filename = display_path:match("(.+)|.+[\\/](.+)")
+            local main_path, archive_path, filename = display_path:match("(.+)(|.-[\\/])(.+)")
             if not main_path then
                 effective_path = display_path:match("(.+)|") or effective_path
-            elseif filename then
-                effective_path = main_path
+            else
+                display_path, save_path, _, protocol, is_remote, file_options = resolve(main_path, main_path, main_path, protocol, is_remote)
+                effective_path = normalize(display_path)
+                save_path = "archive://" .. effective_path .. archive_path .. filename
+                _, main_path = mp.utils.split_path(main_path)
                 display_path = main_path .. ": " .. filename
             end
         elseif protocol == "slice" then
@@ -590,7 +624,7 @@ function path_info(full_path)
             display_path = display_path:match(".-@(.*)") or display_path
         end
 
-        return resolve(effective_path, display_path, protocol, is_remote)
+        return resolve(effective_path, save_path, display_path, protocol, is_remote)
     end
 
     -- don't resolve magnet-style paths
@@ -599,14 +633,15 @@ function path_info(full_path)
         return full_path, full_path, protocol, true, nil
     end
 
-    local display_path, effective_path, effective_protocol, is_remote, file_options = resolve(nil, full_path, nil, false)
+    local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = resolve(nil, nil, full_path, nil, false)
     effective_path = effective_path or display_path
+    save_path = save_path or effective_path
 
-    return display_path, effective_path, effective_protocol, is_remote, file_options
+    return display_path, save_path, effective_path, effective_protocol, is_remote, file_options
 end
 
 function write_history(display)
-    local full_path = get_full_path()
+    local full_path, display_path, save_path, effective_path, effective_protocol, is_remote, file_options = get_full_path()
     if full_path == nil then
         mp.msg.debug("cannot get full path to file")
         if display then
@@ -615,7 +650,6 @@ function write_history(display)
         return
     end
 
-    local display_path, effective_path, effective_protocol, is_remote, file_options = path_info(full_path)
     if data_protocols[effective_protocol] then
         mp.msg.debug("not logging file with " .. effective_protocol .. " protocol")
         if display then
@@ -777,7 +811,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
         local title_length = title_length_str ~= "" and tonumber(title_length_str) or 0
         local full_path = file_info:sub(title_length + 2)
 
-        local display_path, effective_path, effective_protocol, is_remote, file_options = path_info(full_path)
+        local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = path_info(full_path)
         local cache_key = effective_path .. display_path .. (file_options or "")
 
         if options.hide_duplicates and state.known_files[cache_key] then
@@ -1129,7 +1163,7 @@ function dyn_menu_update()
     end
 
     if items and #items > 0 then
-        local full_path = get_full_path()
+        local full_path, display_path, save_path, effective_path, effective_protocol, is_remote, file_options = get_full_path()
         for _, item in ipairs(items) do
             local cmd = string.format("%s \"%s\" %s %s %s",
 				item.value[1],
@@ -1194,7 +1228,7 @@ mp.add_key_binding(nil, "memo-last", function()
     end
     if items then
         local item
-        local full_path = get_full_path()
+        local full_path, display_path, save_path, effective_path, effective_protocol, is_remote, file_options = get_full_path()
         if #items >= 1 and not items[1].keep_open then
             if items[1].value[2] ~= full_path then
                 item = items[1]
