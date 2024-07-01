@@ -463,7 +463,7 @@ function draw_menu()
     last_state.selected_index = math.min(last_state.selected_index, #menu_data.items)
 
     local function get_scrolled_lines()
-        local output_height = height - margin_top * height - margin_bottom * height
+        local output_height = height - margin_top * height - margin_bottom * height - 0.2 * font_size + 0.5
         local screen_lines = math.max(math.floor(output_height / font_size), 1)
         local max_scroll = math.max(num_options - screen_lines, 0)
         return math.min(math.max(last_state.selected_index - math.ceil(screen_lines / 2), 0), max_scroll) - 1
@@ -483,7 +483,7 @@ function draw_menu()
     ass:new_event()
 
     local scrolled_lines = get_scrolled_lines() - 1
-    local pos_y = margin_top * height - scrolled_lines * font_size
+    local pos_y = margin_top * height - scrolled_lines * font_size + 0.2 * font_size + 0.5
     local clip_top = math.floor(margin_top * height + font_size + 0.2 * font_size + 0.5)
     local clip_bottom = math.floor((1 - margin_bottom) * height + 0.5)
     local clipping_coordinates = "0," .. clip_top .. "," .. width .. "," .. clip_bottom
