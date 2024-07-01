@@ -890,7 +890,6 @@ function show_history(entries, next_page, prev_page, update, return_items)
             title = ""
         end
 
-
         if dir_menu then
             title = basename
         elseif title == "" then
@@ -1149,9 +1148,9 @@ end
 -- update menu in mpv-menu-plugin
 function dyn_menu_update()
     search_words = nil
-	event_loop_exhausted = false
+    event_loop_exhausted = false
     local items = show_history(options.entries, false, false, false, true)
-	event_loop_exhausted = false
+    event_loop_exhausted = false
 
     local menu = {
         type = "submenu",
@@ -1166,29 +1165,29 @@ function dyn_menu_update()
         local full_path, display_path, save_path, effective_path, effective_protocol, is_remote, file_options = get_full_path()
         for _, item in ipairs(items) do
             local cmd = string.format("%s \"%s\" %s %s %s",
-				item.value[1],
-				item.value[2]:gsub("\\", "\\\\"):gsub("\"", "\\\""),
-				item.value[3],
-				(item.value[4] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\""),
-				(item.value[5] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\"")
-			)
+                item.value[1],
+                item.value[2]:gsub("\\", "\\\\"):gsub("\"", "\\\""),
+                item.value[3],
+                (item.value[4] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\""),
+                (item.value[5] or ""):gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("^(.+)$", "\"%1\"")
+            )
             menu.submenu[#menu.submenu + 1] = {
                 title = item.title,
                 cmd = cmd,
                 shortcut = item.hint,
-				state = full_path == item.value[2] and {"checked"} or {}
+                state = full_path == item.value[2] and {"checked"} or {}
             }
         end
         if last_state.cursor > 0 then
             menu.submenu[#menu.submenu + 1] = {title = "...", cmd = "script-binding memo-next"}
         end
-	else
-		menu.submenu[#menu.submenu + 1] = {
-			title = "No entries",
-			state = {"disabled"}
-		}
+    else
+        menu.submenu[#menu.submenu + 1] = {
+            title = "No entries",
+            state = {"disabled"}
+        }
     end
-	
+
     mp.commandv("script-message-to", dyn_menu, "update", "memo", mp.utils.format_json(menu))
 end
 
