@@ -969,7 +969,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             end
         end
 
-        if options.hide_deleted then
+        if options.hide_deleted and not (search_words and options.use_titles) then
             if state.known_files[cache_key] and not state.existing_files[cache_key] then
                 return
             end
@@ -1019,6 +1019,33 @@ function show_history(entries, next_page, prev_page, update, return_items)
         if search_words and options.use_titles then
             for _, word in ipairs(search_words) do
                 if unaccent(title):lower():find(word, 1, true) == nil then
+                    return
+                end
+            end
+        end
+
+        if options.hide_deleted and (search_words and options.use_titles) then
+            if state.known_files[cache_key] and not state.existing_files[cache_key] then
+                return
+            end
+            if not state.known_files[cache_key] then
+                local stat = mp.utils.file_info(effective_path)
+                if stat then
+                    state.existing_files[cache_key] = true
+                elseif dir_menu then
+                    state.known_files[cache_key] = true
+                    local dir = mp.utils.split_path(effective_path)
+                    if dir == "." then
+                        return
+                    end
+                    stat = mp.utils.readdir(dir, "files")
+                    if stat and next(stat) ~= nil then
+                        full_path = dir
+                    else
+                        return
+                    end
+                else
+                    state.known_files[cache_key] = true
                     return
                 end
             end
