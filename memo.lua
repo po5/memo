@@ -724,6 +724,8 @@ function path_info(full_path)
             if not main_path then
                 local main_path = display_path:match("(.-)|")
                 effective_path = normalize(main_path or display_path)
+                _, save_path, effective_path, protocol, is_remote, file_options = resolve(effective_path, save_path, display_path, protocol, is_remote)
+                effective_path = normalize(effective_path)
                 save_path = "archive://" .. (save_path or effective_path)
                 if main_path then
                     save_path = save_path .. display_path:match("|(.-)")
