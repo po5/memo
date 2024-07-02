@@ -728,6 +728,7 @@ function path_info(full_path)
                 effective_path = normalize(display_path)
                 save_path = "archive://" .. effective_path .. archive_path .. filename
                 _, main_path = mp.utils.split_path(main_path)
+                _, filename = mp.utils.split_path(filename)
                 display_path = main_path .. ": " .. filename
             end
         elseif protocol == "slice" then
