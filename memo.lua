@@ -720,13 +720,19 @@ function path_info(full_path)
         display_path = display_path:sub(protocol_end + 1)
 
         if protocol == "archive" then
-            local main_path, archive_path, filename = display_path:match("(.+)(|.-[\\/])(.+)")
+            local main_path, archive_path, filename = display_path:gsub("%%7C", "|"):match("(.-)(|.-[\\/])(.+)")
             if not main_path then
-                effective_path = display_path:match("(.+)|") or effective_path
+                local main_path = display_path:match("(.-)|")
+                effective_path = normalize(main_path or display_path)
+                save_path = "archive://" .. (save_path or effective_path)
+                if main_path then
+                    save_path = save_path .. display_path:match("|(.-)")
+                end
             else
-                display_path, save_path, _, protocol, is_remote, file_options = resolve(main_path, main_path, main_path, protocol, is_remote)
+                display_path, save_path, _, protocol, is_remote, file_options = resolve(main_path, save_path, main_path, protocol, is_remote)
                 effective_path = normalize(display_path)
-                save_path = "archive://" .. effective_path .. archive_path .. filename
+                save_path = save_path or effective_path
+                save_path = "archive://" .. save_path .. (save_path:find("archive://") and archive_path:gsub("|", "%%7C") or archive_path) .. filename
                 _, main_path = mp.utils.split_path(main_path)
                 _, filename = mp.utils.split_path(filename)
                 display_path = main_path .. ": " .. filename
