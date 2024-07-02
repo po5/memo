@@ -375,17 +375,19 @@ function has_protocol(path)
 end
 
 function normalize(path)
-    -- don't normalize magnet-style paths
-    local protocol_start, protocol_end, protocol = path:find("^(%a[%w.+-]-):%?")
-    if protocol_end then
-        return path
-    end
-
     if normalize_path ~= nil then
         if normalize_path then
-            path = mp.command_native({"normalize-path", path})
+            -- don't normalize magnet-style paths
+            local protocol_start, protocol_end, protocol = path:find("^(%a[%w.+-]-):%?")
+            if not protocol_end then
+                path = mp.command_native({"normalize-path", path})
+            end
         else
             -- TODO: implement the basics of path normalization ourselves for mpv 0.38.0 and under
+            local directory = mp.get_property("working-directory", "")
+            if not has_protocol(path) then
+                path = mp.utils.join_path(directory, path)
+            end
         end
         return path
     end
