@@ -2,9 +2,12 @@
 --
 -- A recent files menu for mpv
 
+mp.msg.debug("dev copy!")
+
+local default_history_path = "~~state/memo-history.log"
 local options = {
     -- File path gets expanded, leave empty for in-memory history
-    history_path = "~~/memo-history.log",
+    history_path = default_history_path,
 
     -- How many entries to display in menu
     entries = 10,
@@ -79,6 +82,22 @@ mp.options.read_options(options, "memo", function(list)
     end
 end)
 options.path_prefixes = parse_path_prefixes(options.path_prefixes)
+
+-- Automatically migrate history from `~~/` to `~~state/`
+if options.history_path == default_history_path then
+   mp.msg.debug("using default history_path")
+   local function expand_path(path)
+      return mp.command_native({"expand-path", path})
+   end
+   local old_path = expand_path("~~/memo-history.log")
+   local new_path = expand_path(options.history_path)
+
+   if mp.utils.file_info(old_path) ~= nil and mp.utils.file_info(new_path) == nil then
+      -- memo-history.log is only found at the old location
+      mp.msg.info("Migrating history file to the new default location")
+      os.rename(old_path, new_path)
+   end
+end
 
 local assdraw = require "mp.assdraw"
 
