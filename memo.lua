@@ -758,6 +758,11 @@ function path_info(full_path)
     local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = resolve(nil, nil, full_path, nil, false)
     effective_path = effective_path or display_path
     save_path = save_path or effective_path
+    if is_remote and not file_options then
+        display_path = display_path:gsub("%%(%x%x)", function(hex)
+            return string.char(tonumber(hex, 16))
+        end)
+    end
 
     return display_path, save_path, effective_path, effective_protocol, is_remote, file_options
 end
