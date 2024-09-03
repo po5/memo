@@ -306,7 +306,7 @@ function unaccent(str)
     "aàáâãäåāăąǎǟǡǻȁȃȧaeæǣǽ"..
     "bƀƃƅ"..
     "cçćĉċčƈȼ"..
-    "dðƌƋƍȡďđdbȸdzǆǳ"..    
+    "dðƌƋƍȡďđdbȸdzǆǳ"..
     "eèéêëēĕėęěǝȅȇȩɇ"..
     "fƒ"..
     "gĝğġģƔǥǧǵ"..
@@ -350,7 +350,7 @@ function unaccent(str)
         {0x02B0,  0x02FF}, -- Spacing Modifier Letters   0 BMP  Bopomofo (2 characters), Latin (14 characters), Common (64 characters)
     }
 
-    return str:gsub(unimask, function(unichar) 
+    return str:gsub(unimask, function(unichar)
         local unicode = utf8_to_unicode(unichar, 1)
         for _, block in ipairs(zero_width_blocks) do
             if unicode >= block[1] and unicode <= block[2] then
@@ -702,7 +702,7 @@ function path_info(full_path)
                         input_path = display_path:sub(protocol_end + 1)
                     end
                 end
-                display_path = input_path or display_path:sub(protocol_start, protocol_end)
+                display_path = input_path or display_path
             else
                 is_remote = true
                 display_path = display_path:sub(protocol_end + 1)
@@ -1023,10 +1023,17 @@ function show_history(entries, next_page, prev_page, update, return_items)
             if is_remote then
                 title = display_path
             else
+                local effective_display_path = display_path
+                if file_options then
+                    effective_display_path = file_options
+                end
                 if not dirname then
-                    dirname, basename = mp.utils.split_path(display_path)
+                    dirname, basename = mp.utils.split_path(effective_display_path)
                 end
                 title = basename ~= "" and basename or display_path
+                if file_options then
+                    title = display_path .. " " .. title
+                end
             end
         end
 
