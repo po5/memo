@@ -821,7 +821,7 @@ function write_history(display)
     end
 end
 
-function show_history(entries, next_page, prev_page, update, return_items)
+function show_history(entries, next_page, prev_page, update, return_items, dyn_menu)
     if event_loop_exhausted then return end
     event_loop_exhausted = true
 
@@ -1154,7 +1154,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
     end
 
     if return_items then
-        return menu_items
+        if not dyn_menu then
+            return menu_items
+        end
+        return_items = shallow_copy(menu_items)
     end
 
     if options.pagination then
@@ -1166,9 +1169,14 @@ function show_history(entries, next_page, prev_page, update, return_items)
         end
     end
 
-    menu_data = menu_json(menu_items, state.current_page)
     state.pages[state.current_page] = menu_items
     last_state = state
+
+    if return_items then
+        return return_items
+    end
+
+    menu_data = menu_json(menu_items, state.current_page)
 
     if uosc_available then
         uosc_update()
@@ -1310,7 +1318,7 @@ end
 function dyn_menu_update()
     search_words = nil
     event_loop_exhausted = false
-    local items = show_history(options.entries, false, false, false, true)
+    local items = show_history(options.entries, false, false, false, true, true)
     event_loop_exhausted = false
 
     local menu = {
@@ -1340,7 +1348,7 @@ function dyn_menu_update()
             }
         end
         if last_state.cursor > 0 then
-            menu.submenu[#menu.submenu + 1] = {title = "...", cmd = "script-binding memo-next"}
+            menu.submenu[#menu.submenu + 1] = {title = "...", cmd = "script-binding memo-dyn-menu-next"}
         end
     else
         menu.submenu[#menu.submenu + 1] = {
@@ -1358,6 +1366,18 @@ mp.register_script_message("memo-search-uosc:", memo_search_uosc)
 
 mp.add_key_binding(nil, "memo-next", memo_next)
 mp.add_key_binding(nil, "memo-prev", memo_prev)
+mp.add_key_binding(nil, "memo-dyn-menu-next", function()
+    if event_loop_exhausted then return end
+    if search_words or last_state == nil then
+        search_words = nil
+        show_history(options.entries, false, false, false, true, true)
+        event_loop_exhausted = false
+    end
+    if not menu_shown or last_state.current_page > 2 then
+        last_state.current_page = 1
+    end
+    show_history(options.entries, true)
+end)
 mp.add_key_binding(nil, "memo-log", function()
     write_history(true)
 
