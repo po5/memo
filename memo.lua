@@ -25,7 +25,7 @@ local options = {
     timestamp_format = "%Y-%m-%d %H:%M:%S",
 
     -- Display titles instead of filenames when available
-    use_titles = true,
+    use_titles = "yes",
 
     -- Truncate titles to n characters, 0 to disable
     truncate_titles = 60,
@@ -185,6 +185,13 @@ local device_protocols = {
     dvb = true,
     dvd = true,
     dvdnav = true
+}
+
+local web_protocols = {
+    http = true, 
+    https = true, 
+    ytdl = true, 
+    dvb = true
 }
 
 function utf8_char_bytes(str, i)
@@ -949,7 +956,11 @@ function show_history(entries, next_page, prev_page, update, return_items)
             return
         end
 
-        if search_words and not options.use_titles then
+        local is_web = effective_protocol and web_protocols[effective_protocol]
+        --for this specific entry
+        local use_titles_effective = options.use_titles == "yes" or options.use_titles == "web" and is_web
+
+        if search_words and not use_titles_effective then
             for _, word in ipairs(search_words) do
                 if unaccent(display_path):lower():find(word, 1, true) == nil then
                     return
@@ -985,7 +996,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             end
         end
 
-        if options.hide_deleted and not (search_words and options.use_titles) then
+        if options.hide_deleted and not (search_words and use_titles_effective) then
             if state.known_files[cache_key] and not state.existing_files[cache_key] then
                 return
             end
@@ -1013,9 +1024,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
         end
 
         local title = file_info:sub(1, title_length)
-        if not options.use_titles then
-            title = ""
-        end
+
+		if not use_titles_effective then
+			title = ""
+		end
 
         if dir_menu then
             title = basename
@@ -1039,7 +1051,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
 
         title = title:gsub("\n", " ")
 
-        if search_words and options.use_titles then
+        if search_words and use_titles_effective then
             for _, word in ipairs(search_words) do
                 if unaccent(title):lower():find(word, 1, true) == nil then
                     return
@@ -1047,7 +1059,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
             end
         end
 
-        if options.hide_deleted and (search_words and options.use_titles) then
+        if options.hide_deleted and (search_words and use_titles_effective) then
             if state.known_files[cache_key] and not state.existing_files[cache_key] then
                 return
             end
