@@ -21,6 +21,12 @@ local options = {
     -- Display only the latest file from each directory
     hide_same_dir = false,
 
+    -- Display only the latest file from each archive
+    hide_same_archive = false,
+
+    -- If hide_same_archive enabled, display archive filename instead of inner file filename
+    display_archive_name = false,
+
     -- Date format https://www.lua.org/pil/22.1.html
     timestamp_format = "%Y-%m-%d %H:%M:%S",
 
@@ -752,7 +758,7 @@ function path_info(full_path)
     -- don't resolve magnet-style paths
     local protocol_start, protocol_end, protocol = full_path:find("^(%a[%w.+-]-):%?")
     if protocol_end then
-        return full_path, full_path, protocol, true, nil
+        return full_path, full_path, full_path, protocol, true, nil
     end
 
     local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = resolve(nil, nil, full_path, nil, false)
@@ -838,6 +844,7 @@ function show_history(entries, next_page, prev_page, update, return_items)
     local menu_items = {}
     local state = (prev_page or next_page) and last_state or {
         known_dirs = {},
+        known_archives = {},
         known_files = {},
         existing_files = {},
         cursor = history:seek("end"),
@@ -941,6 +948,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
         local display_path, save_path, effective_path, effective_protocol, is_remote, file_options = path_info(full_path)
         local cache_key = effective_path .. display_path .. (file_options or "")
 
+        if options.hide_same_archive and options.display_archive_name and effective_protocol == "archive" then
+            display_path = effective_path
+        end
+
         if options.hide_duplicates and state.known_files[cache_key] then
             return
         end
@@ -962,26 +973,35 @@ function show_history(entries, next_page, prev_page, update, return_items)
         if is_remote then
             state.existing_files[cache_key] = true
             state.known_files[cache_key] = true
-        elseif options.hide_same_dir or dir_menu then
-            dirname, basename = mp.utils.split_path(display_path)
-            if dir_menu then
-                if dirname == "." then return end
-                local unix_dirname = dirname:gsub("\\", "/")
-                local parent, _ = mp.utils.split_path(unix_dirname:sub(1, -2))
-                local start, stop = find_path_prefix(parent, dir_menu_prefixes)
-                if not start then
+        else
+            if options.hide_same_archive and effective_protocol == "archive" then
+                local archive_key = effective_path .. (file_options or "")
+                if state.known_archives[archive_key] then
                     return
                 end
-                basename = unix_dirname:match("/(.-)/", stop)
-                if basename == nil then return end
-                start, stop = dirname:find(basename, stop, true)
-                dirname = dirname:sub(1, stop + 1)
+                state.known_archives[archive_key] = true
             end
-            if state.known_dirs[dirname] then
-                return
-            end
-            if dirname ~= "." then
-                state.known_dirs[dirname] = true
+            if options.hide_same_dir or dir_menu then
+                dirname, basename = mp.utils.split_path(display_path)
+                if dir_menu then
+                    if dirname == "." then return end
+                    local unix_dirname = dirname:gsub("\\", "/")
+                    local parent, _ = mp.utils.split_path(unix_dirname:sub(1, -2))
+                    local start, stop = find_path_prefix(parent, dir_menu_prefixes)
+                    if not start then
+                        return
+                    end
+                    basename = unix_dirname:match("/(.-)/", stop)
+                    if basename == nil then return end
+                    start, stop = dirname:find(basename, stop, true)
+                    dirname = dirname:sub(1, stop + 1)
+                end
+                if state.known_dirs[dirname] then
+                    return
+                end
+                if dirname ~= "." then
+                    state.known_dirs[dirname] = true
+                end
             end
         end
 
@@ -1017,6 +1037,10 @@ function show_history(entries, next_page, prev_page, update, return_items)
             title = ""
         end
 
+        if options.hide_same_archive and options.display_archive_name and effective_protocol == "archive" then
+            title = ""
+        end
+
         if dir_menu then
             title = basename
         elseif title == "" then
@@ -1029,6 +1053,9 @@ function show_history(entries, next_page, prev_page, update, return_items)
                 end
                 if not dirname then
                     dirname, basename = mp.utils.split_path(effective_display_path)
+                end
+                if effective_protocol == "archive" and not options.display_archive_name then
+                    basename = effective_display_path
                 end
                 title = basename ~= "" and basename or display_path
                 if file_options then
